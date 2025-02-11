@@ -12,7 +12,7 @@ import asyncio
 import plotly.express as px
 import pandas as pd
 
-from helpers.dash_app.main_dash_app import dash_data_app
+# from helpers.dash_app.main_dash_app import dash_data_app
 from tools.units import units, unit_system
 from ui.widgets.drone_presets.drone_preset_window import DronePresetWindow
 logger = logging.getLogger()

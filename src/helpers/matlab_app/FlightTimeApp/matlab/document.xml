@@ -1,0 +1,545 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[classdef FlightTime < matlab.apps.AppBase
+
+    % Properties that correspond to app components
+    properties (Access = public)
+        UIFigure                        matlab.ui.Figure
+        ThrustWeightEditField           matlab.ui.control.NumericEditField
+        ThrustWeightEditFieldLabel      matlab.ui.control.Label
+        FlightTimeCalculatorLabel       matlab.ui.control.Label
+        FE3GainSpinner                  matlab.ui.control.Spinner
+        FE3GainSpinnerLabel             matlab.ui.control.Label
+        FE2GainSpinner                  matlab.ui.control.Spinner
+        FE2GainSpinnerLabel             matlab.ui.control.Label
+        FE1GainSpinner                  matlab.ui.control.Spinner
+        FE1GainSpinnerLabel             matlab.ui.control.Label
+        FlightTimeToStartminSpinner     matlab.ui.control.Spinner
+        FlightTimeToStartminSpinnerLabel  matlab.ui.control.Label
+        DryWeightkgSpinner              matlab.ui.control.Spinner
+        DryWeightkgLabel                matlab.ui.control.Label
+        FertilizerWeightkgSpinner       matlab.ui.control.Spinner
+        FertilizerWeightkgSpinnerLabel  matlab.ui.control.Label
+        SprayRatelitersminSpinner       matlab.ui.control.Spinner
+        SprayRatelitersminSpinnerLabel  matlab.ui.control.Label
+        BatteryCapacityAhSpinner        matlab.ui.control.Spinner
+        BatteryCapacityAhSpinnerLabel   matlab.ui.control.Label
+        TimetoLandminEditField          matlab.ui.control.NumericEditField
+        TimetoLandminEditFieldLabel     matlab.ui.control.Label
+        SprayingTimeminEditField        matlab.ui.control.NumericEditField
+        SprayingTimeminEditFieldLabel   matlab.ui.control.Label
+        FlightTimeminEditField          matlab.ui.control.NumericEditField
+        FlightTimeminEditFieldLabel     matlab.ui.control.Label
+        RunButton                       matlab.ui.control.Button
+        DataSelectDropDown              matlab.ui.control.DropDown
+        DataSelectDropDownLabel         matlab.ui.control.Label
+        CurrentAdjustASlider            matlab.ui.control.Slider
+        CurrentAdjustASliderLabel       matlab.ui.control.Label
+        Label                           matlab.ui.control.Label
+        UIAxes                          matlab.ui.control.UIAxes
+        UIAxes4                         matlab.ui.control.UIAxes
+        UIAxes3                         matlab.ui.control.UIAxes
+        UIAxes2                         matlab.ui.control.UIAxes
+    end
+
+    
+    properties (Access = private)
+        motorData_fp_init = 'T-MotorA14.xlsx';
+        Throttle = 0;
+        Voltage = 0;
+        Current = 0;
+        RPM = 0;
+        Thrust = 0;
+
+        Current_Adjust = 10;
+
+        C_bat = 34; %Ah
+        SprayRate = 16; %liters/min
+        TotalTankCapacity = 64.1; %kg
+        DroneWeight = 54.2; %kg
+        TimeToStart = 1; %min
+        
+        %Flight Envelope Gains
+        FE1G = 1.1;
+        FE2G = 1.1;
+        FE3G = 1.1;
+    end
+    
+
+    % Callbacks that handle component events
+    methods (Access = private)
+
+        % Code that executes after component creation
+        function startupFcn(app)
+            %Get Data
+            motorData_fp = app.motorData_fp_init;
+            data = readtable(motorData_fp,'VariableNamingRule','preserve');
+            app.Throttle = data{1:end,1}; % Percent
+            app.Voltage = data{1:end,2}; %Volts
+            app.Current = data{1:end,3}; %Amps
+            app.RPM = data{1:end,4};
+            app.Thrust = data{1:end,5}*(1/1000); %kg-force
+        end
+
+        % Button pushed function: RunButton
+        function RunButtonPushed(app, event)
+            %CurveFitting
+            p = polyfit(app.Thrust,app.Current,2);
+            syms x
+            I_syms = p(1)*x^2+p(2)*x+p(3);
+            I_adjusted_syms = I_syms+app.Current_Adjust;
+            
+            I = matlabFunction(I_syms);
+            I_adjusted = matlabFunction(I_adjusted_syms);
+
+            %Plot Curve Fit
+            plot(app.UIAxes,app.Thrust, app.Current, 'o')
+            hold(app.UIAxes,'on')
+            fplot(app.UIAxes,I, [app.Thrust(1),app.Thrust(end)])
+            fplot(app.UIAxes,I_adjusted, [app.Thrust(1),app.Thrust(end)])
+            hold(app.UIAxes,'off')
+            legend(app.UIAxes,'Manufacturer Data','Fitted Current','Adjusted Current','Location','northwest')
+
+
+            % Calculate Battery Capacity over time
+            %Time to empty tank 
+            t_empty = app.TotalTankCapacity/app.SprayRate;
+            
+            syms t_FE1 t_FE2 t_FE3 %time in minutes
+            %Determine weight for each flight envelope
+            TOW = app.DroneWeight+app.TotalTankCapacity;
+            W_FE1 = TOW/4;
+            W_FE2 = (TOW - app.SprayRate*t_FE2)/4; %Where t_FE2 ranges from 0 to t_empty
+            W_FE3 = (TOW - app.TotalTankCapacity)/4;
+            
+            %Find Current Drain for each Flight Envelope
+            I_FE1 = subs(I_adjusted_syms,x,W_FE1)*app.FE1G;
+            I_FE2 = subs(I_adjusted_syms,x,W_FE2)*app.FE2G;
+            I_FE3 = subs(I_adjusted_syms,x,W_FE3)*app.FE3G;
+            
+            %Find Capacity Drain over time for each Flight Envelope
+            Capacity_FE1 = app.C_bat - I_FE1*(t_FE1/60)*4;
+            %Capacity_FE2 = subs(Capacity_FE1,t_FE1,TimeToStart) - (I_FE2*(t_FE2/60)*4);
+            Capacity_FE2 = subs(Capacity_FE1,t_FE1,app.TimeToStart) - int(I_FE2/60,t_FE2)*4;
+            Capacity_FE3 = subs(Capacity_FE2,t_FE2,t_empty) - I_FE3*(t_FE3/60)*4;
+            
+            %Find time till 20% Capacity and time till 0Ah
+            eq1 = Capacity_FE3 == 0.2*app.C_bat;
+            eq2 = Capacity_FE3 == 0;
+            
+            t_FE3_1 = double(solve(eq1,t_FE3));
+            t_FE3_2 =double(solve(eq2,t_FE3));
+            t1 = t_FE3_1+t_empty+app.TimeToStart; %time till 20% Capacity
+            t2 = t_FE3_2+t_empty+app.TimeToStart; %time till 0Ah
+
+            app.FlightTimeminEditField.Value = t1;
+            app.SprayingTimeminEditField.Value = t_empty;
+            app.TimetoLandminEditField.Value = t1 - t_empty - app.TimeToStart;
+
+            % Thrust to weight calculation
+            maxthrust = app.Thrust(end)*4;
+            thrust_weight = maxthrust/TOW;
+            app.ThrustWeightEditField.Value = thrust_weight;
+
+            %% Plotting
+            %Plot Weight Over Time
+            
+            %Define Flight Envelope time intervals
+            T1 = linspace(0,app.TimeToStart,1000);
+            T2 = linspace(0,t_empty,1000);
+            T3 = linspace(0,t_FE3_2,1000);
+            
+            %Convert symbolic function to matlab function
+            W_FE2_func = matlabFunction(W_FE2);
+            
+            W_FE1_range = double(W_FE1)*ones(1,1000);
+            W_FE2_range = W_FE2_func(T2);
+            W_FE3_range = double(W_FE3)*ones(1,1000);
+            
+            x_range1 = linspace(0,app.TimeToStart,1000);
+            x_range2 = linspace(app.TimeToStart,app.TimeToStart+t_empty,1000);
+            x_range3 = linspace(app.TimeToStart+t_empty,t2,1000);
+            
+            plot(app.UIAxes2,x_range1,W_FE1_range,'LineWidth',2);
+            hold(app.UIAxes2,'on')
+            plot(app.UIAxes2,x_range2,W_FE2_range,'LineWidth',2);
+            plot(app.UIAxes2,x_range3,W_FE3_range,'LineWidth',2);
+            hold(app.UIAxes2,'off')
+            currentYlim = ylim(app.UIAxes2);
+            ylim(app.UIAxes2,[0,currentYlim(2)])
+            legend(app.UIAxes2,'Flight To Start', 'Spraying', 'Remaining Flight Time','Location','northeast')
+            
+            
+            %Plot Current Draw Over Time
+            
+            %Convert symbolic function to matlab function
+            I_FE2_func = matlabFunction(I_FE2);
+            
+            I_FE1_range = double(I_FE1)*ones(1,1000);
+            I_FE2_range = I_FE2_func(T2);
+            I_FE3_range = double(I_FE3)*ones(1,1000);
+            
+            plot(app.UIAxes3,x_range1,I_FE1_range,'LineWidth',2);
+            hold(app.UIAxes3,'on')
+            plot(app.UIAxes3,x_range2,I_FE2_range,'LineWidth',2);
+            plot(app.UIAxes3,x_range3,I_FE3_range,'LineWidth',2);
+            hold(app.UIAxes3,'off')
+            currentYlim = ylim(app.UIAxes3);
+            ylim(app.UIAxes3,[0,currentYlim(2)])
+            legend(app.UIAxes3,'Flight To Start', 'Spraying', 'Remaining Flight Time','Location','northeast')
+
+
+            %Plot Flight Time
+
+            %Convert symbolic function to matlab function
+            Capacity_FE1_func = matlabFunction(Capacity_FE1);
+            Capacity_FE2_func = matlabFunction(Capacity_FE2);
+            Capacity_FE3_func = matlabFunction(Capacity_FE3);
+            
+            Capacity_FE1_range = Capacity_FE1_func(T1);
+            Capacity_FE2_range = Capacity_FE2_func(T2);
+            Capacity_FE3_range = Capacity_FE3_func(T3);
+            
+            plot(app.UIAxes4,x_range1,Capacity_FE1_range,'LineWidth',2);
+            hold(app.UIAxes4,'on')
+            plot(app.UIAxes4,x_range2,Capacity_FE2_range,'LineWidth',2);
+            plot(app.UIAxes4,x_range3,Capacity_FE3_range,'LineWidth',2);
+            hold(app.UIAxes4,'off')
+            xline(app.UIAxes4,t1,'--r');
+            currentYlim = ylim(app.UIAxes4);
+            ylim(app.UIAxes4,[0,currentYlim(2)])
+            legend(app.UIAxes4,'Flight To Start', 'Spraying', 'Remaining Flight Time','Location','northeast')
+
+
+        end
+
+        % Value changed function: CurrentAdjustASlider
+        function CurrentAdjustASliderValueChanged(app, event)
+            value = app.CurrentAdjustASlider.Value;
+            
+            %Make slider discrete because App Designer Sucks: 
+            % determine which discrete option the current value is closest to.
+            [~, minIdx] = min(abs(value - event.Source.MinorTicks(:)));
+            % move the slider to that option
+            event.Source.Value = event.Source.MinorTicks(minIdx);
+            % Override the selected value if you plan on using it within this function
+            value = event.Source.MinorTicks(minIdx);
+            
+            app.Current_Adjust = value;
+        end
+
+        % Value changed function: BatteryCapacityAhSpinner
+        function BatteryCapacityAhSpinnerValueChanged(app, event)
+            value = app.BatteryCapacityAhSpinner.Value;
+            app.C_bat = value;
+        end
+
+        % Value changed function: SprayRatelitersminSpinner
+        function SprayRatelitersminSpinnerValueChanged(app, event)
+            value = app.SprayRatelitersminSpinner.Value;
+            app.SprayRate = value;
+        end
+
+        % Value changed function: FertilizerWeightkgSpinner
+        function FertilizerWeightkgSpinnerValueChanged(app, event)
+            value = app.FertilizerWeightkgSpinner.Value;
+            app.TotalTankCapacity = value;
+        end
+
+        % Value changed function: DryWeightkgSpinner
+        function DryWeightkgSpinnerValueChanged(app, event)
+            value = app.DryWeightkgSpinner.Value;
+            app.DroneWeight = value;
+        end
+
+        % Value changed function: FlightTimeToStartminSpinner
+        function FlightTimeToStartminSpinnerValueChanged(app, event)
+            value = app.FlightTimeToStartminSpinner.Value;
+            app.TimeToStart = value;
+        end
+
+        % Value changed function: FE1GainSpinner
+        function FE1GainSpinnerValueChanged(app, event)
+            value = app.FE1GainSpinner.Value;
+            app.FE1G = value;
+        end
+
+        % Value changed function: FE2GainSpinner
+        function FE2GainSpinnerValueChanged(app, event)
+            value = app.FE2GainSpinner.Value;
+            app.FE2G = value;
+        end
+
+        % Value changed function: FE3GainSpinner
+        function FE3GainSpinnerValueChanged(app, event)
+            value = app.FE3GainSpinner.Value;
+            app.FE3G = value;
+        end
+    end
+
+    % Component initialization
+    methods (Access = private)
+
+        % Create UIFigure and components
+        function createComponents(app)
+
+            % Create UIFigure and hide until all components are created
+            app.UIFigure = uifigure('Visible', 'off');
+            app.UIFigure.Color = [0.8 0.8 0.8];
+            app.UIFigure.Position = [100 100 1033 764];
+            app.UIFigure.Name = 'MATLAB App';
+
+            % Create UIAxes2
+            app.UIAxes2 = uiaxes(app.UIFigure);
+            title(app.UIAxes2, 'Weight Over Time Per Arm')
+            xlabel(app.UIAxes2, 'Time [min]')
+            ylabel(app.UIAxes2, 'Weight [kg]')
+            zlabel(app.UIAxes2, 'Z')
+            app.UIAxes2.Position = [371 357 300 185];
+
+            % Create UIAxes3
+            app.UIAxes3 = uiaxes(app.UIFigure);
+            title(app.UIAxes3, 'Current Draw Over Time')
+            xlabel(app.UIAxes3, 'Time [min]')
+            ylabel(app.UIAxes3, 'Current Draw [A]')
+            zlabel(app.UIAxes3, 'Z')
+            app.UIAxes3.Position = [708 357 300 185];
+
+            % Create UIAxes4
+            app.UIAxes4 = uiaxes(app.UIFigure);
+            title(app.UIAxes4, 'Battery Capacitance Over Time')
+            xlabel(app.UIAxes4, 'Time [min]')
+            ylabel(app.UIAxes4, 'Capacitance [Ah]')
+            zlabel(app.UIAxes4, 'Z')
+            app.UIAxes4.Position = [370 100 396 244];
+
+            % Create UIAxes
+            app.UIAxes = uiaxes(app.UIFigure);
+            title(app.UIAxes, 'Adjusted Current Draw For Thrust Per Motor')
+            xlabel(app.UIAxes, 'Thrust [kg]')
+            ylabel(app.UIAxes, 'Current Draw [Amp]')
+            zlabel(app.UIAxes, 'Z')
+            app.UIAxes.Position = [525 541 338 198];
+
+            % Create Label
+            app.Label = uilabel(app.UIFigure);
+            app.Label.BackgroundColor = [0.502 0.502 0.502];
+            app.Label.Position = [25 77 289 543];
+            app.Label.Text = '';
+
+            % Create CurrentAdjustASliderLabel
+            app.CurrentAdjustASliderLabel = uilabel(app.UIFigure);
+            app.CurrentAdjustASliderLabel.HorizontalAlignment = 'right';
+            app.CurrentAdjustASliderLabel.Position = [89 529 100 22];
+            app.CurrentAdjustASliderLabel.Text = 'Current Adjust [A]';
+
+            % Create CurrentAdjustASlider
+            app.CurrentAdjustASlider = uislider(app.UIFigure);
+            app.CurrentAdjustASlider.Limits = [0 30];
+            app.CurrentAdjustASlider.ValueChangedFcn = createCallbackFcn(app, @CurrentAdjustASliderValueChanged, true);
+            app.CurrentAdjustASlider.Position = [73 517 150 3];
+            app.CurrentAdjustASlider.Value = 10;
+
+            % Create DataSelectDropDownLabel
+            app.DataSelectDropDownLabel = uilabel(app.UIFigure);
+            app.DataSelectDropDownLabel.HorizontalAlignment = 'right';
+            app.DataSelectDropDownLabel.Position = [71 567 67 22];
+            app.DataSelectDropDownLabel.Text = 'Data Select';
+
+            % Create DataSelectDropDown
+            app.DataSelectDropDown = uidropdown(app.UIFigure);
+            app.DataSelectDropDown.Items = {'Manufacturer Data'};
+            app.DataSelectDropDown.Position = [153 567 134 22];
+            app.DataSelectDropDown.Value = 'Manufacturer Data';
+
+            % Create RunButton
+            app.RunButton = uibutton(app.UIFigure, 'push');
+            app.RunButton.ButtonPushedFcn = createCallbackFcn(app, @RunButtonPushed, true);
+            app.RunButton.Position = [894 15 100 23];
+            app.RunButton.Text = 'Run';
+
+            % Create FlightTimeminEditFieldLabel
+            app.FlightTimeminEditFieldLabel = uilabel(app.UIFigure);
+            app.FlightTimeminEditFieldLabel.HorizontalAlignment = 'right';
+            app.FlightTimeminEditFieldLabel.Position = [465 63 93 22];
+            app.FlightTimeminEditFieldLabel.Text = 'Flight Time [min]';
+
+            % Create FlightTimeminEditField
+            app.FlightTimeminEditField = uieditfield(app.UIFigure, 'numeric');
+            app.FlightTimeminEditField.Position = [573 63 100 22];
+
+            % Create SprayingTimeminEditFieldLabel
+            app.SprayingTimeminEditFieldLabel = uilabel(app.UIFigure);
+            app.SprayingTimeminEditFieldLabel.HorizontalAlignment = 'right';
+            app.SprayingTimeminEditFieldLabel.Position = [781 236 111 22];
+            app.SprayingTimeminEditFieldLabel.Text = 'Spraying Time [min]';
+
+            % Create SprayingTimeminEditField
+            app.SprayingTimeminEditField = uieditfield(app.UIFigure, 'numeric');
+            app.SprayingTimeminEditField.Position = [907 236 100 22];
+
+            % Create TimetoLandminEditFieldLabel
+            app.TimetoLandminEditFieldLabel = uilabel(app.UIFigure);
+            app.TimetoLandminEditFieldLabel.HorizontalAlignment = 'right';
+            app.TimetoLandminEditFieldLabel.Position = [789 198 105 22];
+            app.TimetoLandminEditFieldLabel.Text = 'Time to Land [min]';
+
+            % Create TimetoLandminEditField
+            app.TimetoLandminEditField = uieditfield(app.UIFigure, 'numeric');
+            app.TimetoLandminEditField.Position = [907 198 102 22];
+
+            % Create BatteryCapacityAhSpinnerLabel
+            app.BatteryCapacityAhSpinnerLabel = uilabel(app.UIFigure);
+            app.BatteryCapacityAhSpinnerLabel.HorizontalAlignment = 'right';
+            app.BatteryCapacityAhSpinnerLabel.Position = [52 433 119 22];
+            app.BatteryCapacityAhSpinnerLabel.Text = 'Battery Capacity [Ah]';
+
+            % Create BatteryCapacityAhSpinner
+            app.BatteryCapacityAhSpinner = uispinner(app.UIFigure);
+            app.BatteryCapacityAhSpinner.Limits = [0 Inf];
+            app.BatteryCapacityAhSpinner.ValueChangedFcn = createCallbackFcn(app, @BatteryCapacityAhSpinnerValueChanged, true);
+            app.BatteryCapacityAhSpinner.Position = [186 433 100 22];
+            app.BatteryCapacityAhSpinner.Value = 34;
+
+            % Create SprayRatelitersminSpinnerLabel
+            app.SprayRatelitersminSpinnerLabel = uilabel(app.UIFigure);
+            app.SprayRatelitersminSpinnerLabel.HorizontalAlignment = 'right';
+            app.SprayRatelitersminSpinnerLabel.Position = [49 392 123 22];
+            app.SprayRatelitersminSpinnerLabel.Text = 'Spray Rate [liters/min]';
+
+            % Create SprayRatelitersminSpinner
+            app.SprayRatelitersminSpinner = uispinner(app.UIFigure);
+            app.SprayRatelitersminSpinner.Limits = [5 Inf];
+            app.SprayRatelitersminSpinner.ValueChangedFcn = createCallbackFcn(app, @SprayRatelitersminSpinnerValueChanged, true);
+            app.SprayRatelitersminSpinner.Position = [187 392 100 22];
+            app.SprayRatelitersminSpinner.Value = 16;
+
+            % Create FertilizerWeightkgSpinnerLabel
+            app.FertilizerWeightkgSpinnerLabel = uilabel(app.UIFigure);
+            app.FertilizerWeightkgSpinnerLabel.HorizontalAlignment = 'right';
+            app.FertilizerWeightkgSpinnerLabel.Position = [59 348 113 22];
+            app.FertilizerWeightkgSpinnerLabel.Text = 'Fertilizer Weight [kg]';
+
+            % Create FertilizerWeightkgSpinner
+            app.FertilizerWeightkgSpinner = uispinner(app.UIFigure);
+            app.FertilizerWeightkgSpinner.Step = 5;
+            app.FertilizerWeightkgSpinner.Limits = [0 Inf];
+            app.FertilizerWeightkgSpinner.ValueChangedFcn = createCallbackFcn(app, @FertilizerWeightkgSpinnerValueChanged, true);
+            app.FertilizerWeightkgSpinner.Position = [187 348 100 22];
+            app.FertilizerWeightkgSpinner.Value = 64.1;
+
+            % Create DryWeightkgLabel
+            app.DryWeightkgLabel = uilabel(app.UIFigure);
+            app.DryWeightkgLabel.HorizontalAlignment = 'right';
+            app.DryWeightkgLabel.Position = [86 302 86 22];
+            app.DryWeightkgLabel.Text = 'Dry Weight [kg]';
+
+            % Create DryWeightkgSpinner
+            app.DryWeightkgSpinner = uispinner(app.UIFigure);
+            app.DryWeightkgSpinner.Step = 5;
+            app.DryWeightkgSpinner.Limits = [0 Inf];
+            app.DryWeightkgSpinner.ValueChangedFcn = createCallbackFcn(app, @DryWeightkgSpinnerValueChanged, true);
+            app.DryWeightkgSpinner.Position = [187 302 100 22];
+            app.DryWeightkgSpinner.Value = 54.2;
+
+            % Create FlightTimeToStartminSpinnerLabel
+            app.FlightTimeToStartminSpinnerLabel = uilabel(app.UIFigure);
+            app.FlightTimeToStartminSpinnerLabel.HorizontalAlignment = 'right';
+            app.FlightTimeToStartminSpinnerLabel.Position = [34 257 138 22];
+            app.FlightTimeToStartminSpinnerLabel.Text = 'Flight Time To Start [min]';
+
+            % Create FlightTimeToStartminSpinner
+            app.FlightTimeToStartminSpinner = uispinner(app.UIFigure);
+            app.FlightTimeToStartminSpinner.Step = 0.2;
+            app.FlightTimeToStartminSpinner.Limits = [0 5];
+            app.FlightTimeToStartminSpinner.ValueChangedFcn = createCallbackFcn(app, @FlightTimeToStartminSpinnerValueChanged, true);
+            app.FlightTimeToStartminSpinner.Position = [187 257 100 22];
+            app.FlightTimeToStartminSpinner.Value = 1;
+
+            % Create FE1GainSpinnerLabel
+            app.FE1GainSpinnerLabel = uilabel(app.UIFigure);
+            app.FE1GainSpinnerLabel.HorizontalAlignment = 'right';
+            app.FE1GainSpinnerLabel.Position = [79 185 54 22];
+            app.FE1GainSpinnerLabel.Text = 'FE1 Gain';
+
+            % Create FE1GainSpinner
+            app.FE1GainSpinner = uispinner(app.UIFigure);
+            app.FE1GainSpinner.Step = 0.1;
+            app.FE1GainSpinner.ValueChangedFcn = createCallbackFcn(app, @FE1GainSpinnerValueChanged, true);
+            app.FE1GainSpinner.Position = [148 185 100 22];
+            app.FE1GainSpinner.Value = 1.1;
+
+            % Create FE2GainSpinnerLabel
+            app.FE2GainSpinnerLabel = uilabel(app.UIFigure);
+            app.FE2GainSpinnerLabel.HorizontalAlignment = 'right';
+            app.FE2GainSpinnerLabel.Position = [79 147 54 22];
+            app.FE2GainSpinnerLabel.Text = 'FE2 Gain';
+
+            % Create FE2GainSpinner
+            app.FE2GainSpinner = uispinner(app.UIFigure);
+            app.FE2GainSpinner.Step = 0.1;
+            app.FE2GainSpinner.ValueChangedFcn = createCallbackFcn(app, @FE2GainSpinnerValueChanged, true);
+            app.FE2GainSpinner.Position = [148 147 100 22];
+            app.FE2GainSpinner.Value = 1.1;
+
+            % Create FE3GainSpinnerLabel
+            app.FE3GainSpinnerLabel = uilabel(app.UIFigure);
+            app.FE3GainSpinnerLabel.HorizontalAlignment = 'right';
+            app.FE3GainSpinnerLabel.Position = [76 112 57 22];
+            app.FE3GainSpinnerLabel.Text = 'FE 3 Gain';
+
+            % Create FE3GainSpinner
+            app.FE3GainSpinner = uispinner(app.UIFigure);
+            app.FE3GainSpinner.Step = 0.1;
+            app.FE3GainSpinner.ValueChangedFcn = createCallbackFcn(app, @FE3GainSpinnerValueChanged, true);
+            app.FE3GainSpinner.Position = [148 112 100 22];
+            app.FE3GainSpinner.Value = 1.1;
+
+            % Create FlightTimeCalculatorLabel
+            app.FlightTimeCalculatorLabel = uilabel(app.UIFigure);
+            app.FlightTimeCalculatorLabel.FontName = 'Charter';
+            app.FlightTimeCalculatorLabel.FontSize = 36;
+            app.FlightTimeCalculatorLabel.Position = [50 666 362 49];
+            app.FlightTimeCalculatorLabel.Text = 'Flight Time Calculator';
+
+            % Create ThrustWeightEditFieldLabel
+            app.ThrustWeightEditFieldLabel = uilabel(app.UIFigure);
+            app.ThrustWeightEditFieldLabel.HorizontalAlignment = 'right';
+            app.ThrustWeightEditFieldLabel.Position = [806 100 87 22];
+            app.ThrustWeightEditFieldLabel.Text = 'Thrust / Weight';
+
+            % Create ThrustWeightEditField
+            app.ThrustWeightEditField = uieditfield(app.UIFigure, 'numeric');
+            app.ThrustWeightEditField.Position = [908 100 100 22];
+
+            % Show the figure after all components are created
+            app.UIFigure.Visible = 'on';
+        end
+    end
+
+    % App creation and deletion
+    methods (Access = public)
+
+        % Construct app
+        function app = FlightTime
+
+            % Create UIFigure and components
+            createComponents(app)
+
+            % Register the app with App Designer
+            registerApp(app, app.UIFigure)
+
+            % Execute the startup function
+            runStartupFcn(app, @startupFcn)
+
+            if nargout == 0
+                clear app
+            end
+        end
+
+        % Code that executes before app deletion
+        function delete(app)
+
+            % Delete UIFigure when app is deleted
+            delete(app.UIFigure)
+        end
+    end
+end]]></w:t></w:r></w:p></w:body></w:document>

@@ -1,4 +1,4 @@
-from enum import Enum, StrEnum
+from enum import Enum
 
 class unit_system(Enum):
     METRIC = 0
@@ -11,6 +11,7 @@ class units:
         self.force_unit = unit
         self.mass_unit = unit
         self.distance_unit = unit
+        self.volume_unit = unit
 
     @property
     def unit_name(self):
@@ -49,6 +50,17 @@ class units:
     @distance_unit.setter
     def distance_unit(self, value):
         if value == 0:
-            self._distance_unit = "ft"
-        else:
             self._distance_unit = "km"
+        else:
+            self._distance_unit = "ft"
+
+    @property
+    def volume_unit(self):
+        return self._volume_unit
+
+    @volume_unit.setter
+    def volume_unit(self, value):
+        if value == 0:
+            self._volume_unit = "liter"
+        else:
+            self._volume_unit = "gallon"
