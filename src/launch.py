@@ -1,14 +1,14 @@
 import logging
-import os, sys
+import sys
 
-from ui.main_ui import MainUI
-from main_app import uc_agriculture_app
+from src.ui.main_ui import MainUI
+from app_manager import get_app
 
 logger = logging.getLogger()
 logger.setLevel(0)
 
 def launch_app():
-    app = uc_agriculture_app()
+    app = get_app()
 
     ui = MainUI()
     app.main_ui = ui

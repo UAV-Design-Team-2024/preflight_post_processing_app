@@ -1,22 +1,24 @@
 import logging
 import asyncio
 import socket
-
+from typing import TYPE_CHECKING
 import PySide6.QtCore
 from PySide6.QtWidgets import QApplication, QWidget, QMainWindow
 from PySide6.QtWidgets import QPushButton, QBoxLayout, QGridLayout, QVBoxLayout, QLabel, QLineEdit, QComboBox, QFileDialog
 
+
+
 from tools.drone_presets.motor_data import Motor_Data
+from tools.drone_presets.drone_preset import DronePresetEditor
+from src.app_manager import get_app
 
 logger = logging.getLogger()
 logger.setLevel(0)
 
 class DronePresetWindow(QWidget):
-    def __init__(self, units):
+    def __init__(self):
         super().__init__()
         self.setWindowTitle("Create/Edit Drone Presets")
-
-        self.units = units
 
         self.create_widgets()
         self.create_layout()
@@ -58,6 +60,7 @@ class DronePresetWindow(QWidget):
         self.setLayout(self.window_layout)
 
     def create_widgets(self):
+        app = get_app()
 
         self.blank = QLabel("")
         self.load_btn = QPushButton("Load Motor Data (.xlsx)")
@@ -71,7 +74,7 @@ class DronePresetWindow(QWidget):
         self.section_1_label.setStyleSheet("font-weight: bold")
 
         self.throttle_label = QLabel("Throttle (%)")
-        self.thrust_label = QLabel(f"Thrust ({self.units.mass_unit}/force)")
+        self.thrust_label = QLabel(f"Thrust ({app.units.mass_unit}/force)")
         self.voltage_label = QLabel("Voltage (Volts)")
         self.current_label = QLabel("Current (Amps)")
 
@@ -79,8 +82,8 @@ class DronePresetWindow(QWidget):
         self.optional_section_label = QLabel(f"Please input EITHER: a rough estimate OR manufacturer provided data")
         self.optional_section_label.setStyleSheet("font-weight: bold")
 
-        self.battery_capacity_label = QLabel("Battery Capacity (Amp Hours (Ah))")
-        self.RPM_label = QLabel("Propeller RPM")
+        self.battery_capacity_label = QLabel("Singular Battery Capacity (Amp Hours (Ah))")
+        self.RPM_label = QLabel("Singular Propeller RPM")
 
         self.throttle_input = QComboBox()
         self.thrust_input = QLineEdit()
@@ -92,16 +95,16 @@ class DronePresetWindow(QWidget):
         self.throttle_input.setEnabled(False)
         self.throttle_input.currentIndexChanged.connect(self.update_section_1_layouts)
 
-        self.thrust_input.setEnabled(False)
-        self.voltage_input.setEnabled(False)
-        self.current_input.setEnabled(False)
+        self.thrust_input.setReadOnly(True)
+        self.voltage_input.setReadOnly(True)
+        self.current_input.setReadOnly(True)
 
 
         self.section_2_label = QLabel("Please enter payload specifications:")
         self.section_2_label.setStyleSheet("font-weight: bold")
 
-        self.drone_weight_label = QLabel(f"Drone Weight ({self.units.mass_unit})")
-        self.tank_capacity_label = QLabel(f"Tank Capacity ({self.units.mass_unit})")
+        self.drone_weight_label = QLabel(f"Drone Weight ({app.units.mass_unit})")
+        self.tank_capacity_label = QLabel(f"Tank Capacity ({app.units.mass_unit})")
 
         self.drone_weight_input = QLineEdit()
         self.tank_capacity_input = QLineEdit()
@@ -114,11 +117,16 @@ class DronePresetWindow(QWidget):
 
 
     def save_data(self):
-        self.preset_unit = self.units.unit_name
+        app = get_app()
+        self.preset_unit = app.units.unit_name
         self.preset_name = self.preset_name_input.text()
 
         self.preset_drone_weight = float(self.drone_weight_input.text())
         self.preset_tank_capacity = float(self.tank_capacity_input.text())
+        self.preset_battery_capacity = float(self.battery_capacity_input.text())
+        self.preset_propeller_rpm = float(self.RPM_input.text())
+
+
 
     def load_data(self):
 

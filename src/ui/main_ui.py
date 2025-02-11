@@ -6,7 +6,7 @@ import PySide6.QtCore
 from PySide6.QtWidgets import QApplication, QWidget, QMainWindow
 from PySide6.QtWidgets import QPushButton, QBoxLayout, QGridLayout, QVBoxLayout, QLabel
 
-from main_app import get_app
+from src.app_manager import get_app
 logger = logging.getLogger()
 logger.setLevel(0)
 

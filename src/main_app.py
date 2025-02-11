@@ -26,9 +26,9 @@ You can have other functions/helpers in different places, but everything should 
 for ease of access...
 '''
 
-def get_app():
-    """ Returns the current QApplication instance """
-    return QApplication.instance()
+# def get_app():
+#     """ Returns the current QApplication instance """
+#     return QApplication.instance()
 
 class uc_agriculture_app(QApplication):
     def __init__(self, *args):
@@ -83,7 +83,7 @@ class uc_agriculture_app(QApplication):
         # self.threadpool.start(self.worker)
 
     def create_drone_preset_window(self):
-        self.drone_preset_window = DronePresetWindow(self.units)
+        self.drone_preset_window = DronePresetWindow()
         self.drone_preset_window.show()
 
     def create_dash_urls(self):
