@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.main_app import get_app
+from src.app_manager import get_app
 
 class DronePresetEditor:
     def __init__(self, motor_data):
