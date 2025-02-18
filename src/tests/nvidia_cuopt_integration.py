@@ -1,11 +1,15 @@
+import os
 import geopandas as gp
 import matplotlib.pyplot as mpl
 import numpy as np
 import random
+import json
+
 
 import shapely.plotting
 from shapely.geometry import Polygon, Point
 
+from cuopt_thin_client import CuOptServiceClient
 def create_points_in_polygon(polygon, num_points):
     """
     Generates random points within a given polygon.
