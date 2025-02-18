@@ -6,7 +6,7 @@ import random
 import shapely.plotting
 from shapely.geometry import Polygon, Point
 
-path = 'C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests'
+path = 'src/tests'
 
 def latlon_to_ecef(lat_deg, lon_deg, alt_m=0):
     """
