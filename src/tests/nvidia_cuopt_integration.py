@@ -30,6 +30,20 @@ def latlon_to_ecef(lat_deg, lon_deg, alt_m=0):
 
     return x, y, z
 
+def get_distance_matrix(points, alt):
+    distance = np.zeros((len(points), len(points)))
+    for i in range(int(len(points))):
+        x1,y1,z1 = latlon_to_ecef(points[i].x, points[i].y, alt)
+        for j in range(i+1, int(len(points))):
+            x2,y2,z2 = latlon_to_ecef(points[j].x, points[j].y, alt)
+            dist = np.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
+            distance[i][j] = dist
+    distance_matrix = distance + distance.T
+    return distance_matrix
+
+def check_symmetric(a, rtol=1e-05, atol=1e-08):
+    return np.allclose(a, a.T, rtol=rtol, atol=atol)
+
 def create_points_in_polygon(polygon, spacing, altitude):
 
 
@@ -75,6 +89,9 @@ boundary_polygon = kml_file["geometry"][1]
 
 spacing = 10 # meters
 points = create_points_in_polygon(boundary_polygon, spacing, altitude)
+
+distmat = get_distance_matrix(points, altitude)
+
 point_cloud = shapely.plotting.plot_points(points)
 boundary_polygon_line = shapely.plotting.plot_polygon(boundary_polygon)
 
