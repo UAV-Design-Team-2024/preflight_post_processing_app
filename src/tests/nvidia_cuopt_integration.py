@@ -1,3 +1,4 @@
+import os
 import geopandas as gp
 import matplotlib.pyplot as mpl
 import numpy as np
@@ -5,12 +6,13 @@ import random
 
 import shapely.plotting
 from shapely.geometry import Polygon, Point
+from cuopt_thin_client import CuOptServiceClient
 
 path = 'C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests'
 
 def latlon_to_ecef(lat_deg, lon_deg, alt_m=0):
     """
-    Converts latitude, longitude (in degrees), and altitude (in meters) to 
+    Converts latitude, longitude (in degrees), and altitude (in meters) to
     ECEF coordinates.
     """
     # WGS 84 ellipsoid parameters
@@ -25,10 +27,12 @@ def latlon_to_ecef(lat_deg, lon_deg, alt_m=0):
     x = (N + alt_m) * np.cos(lat_rad) * np.cos(lon_rad)
     y = (N + alt_m) * np.cos(lat_rad) * np.sin(lon_rad)
     z = ((1 - e2) * N + alt_m) * np.sin(lat_rad)
-    
+
     return x, y, z
 
 def create_points_in_polygon(polygon, spacing, altitude):
+
+
     """
     Generates random points within a given polygon.
 
