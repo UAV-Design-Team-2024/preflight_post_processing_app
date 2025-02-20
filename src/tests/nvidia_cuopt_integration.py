@@ -129,7 +129,7 @@ sak = r"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"
 
 cuopt_service_client = CuOptServiceClient(
     sak=sak,
-    function_id=<FUNCTION_ID_OBTAINED_FROM_NGC>
+    function_id='<FUNCTION_ID_OBTAINED_FROM_NGC>'
 )
 
 if plot:
