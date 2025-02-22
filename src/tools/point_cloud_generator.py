@@ -30,6 +30,12 @@ def latlon_to_ecef(lat_deg, lon_deg, alt_m=0):
 
     return x, y, z
 
+def get_coord_matrix(points, alt):
+    coords = []
+    for i in range(int(len(points))):
+        x1, y1, z1 = latlon_to_ecef(points[i].x, points[i].y, alt)
+        coords.append((x1, y1))
+    return coords
 def get_distance_matrix(points, alt):
     distance = np.zeros((len(points), len(points)))
     for i in range(int(len(points))):
@@ -39,6 +45,8 @@ def get_distance_matrix(points, alt):
             dist = np.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
             distance[i][j] = dist
     distance_matrix = distance + distance.T
+    print(distance_matrix.shape)
+    distance_matrix = distance_matrix.tolist()
     return distance_matrix
 
 def check_symmetric(a, rtol=1e-05, atol=1e-08):
@@ -65,7 +73,6 @@ def create_points_in_polygon(polygon, spacing, altitude):
     dist = np.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
     num_points = dist / spacing
     print(num_points)
-
     xrange = np.linspace(minx, maxx, num=round(num_points))
     yrange = np.linspace(miny, maxy, num=round(num_points))
     points = []
@@ -89,3 +96,8 @@ def make_points(filepath, height, spacing):
     points = create_points_in_polygon(boundary_polygon, spacing, altitude)
     return boundary_polygon, points, altitude
 
+def make_point_cloud_plot(points, boundary_polygon):
+    point_cloud = shapely.plotting.plot_points(points)
+    # boundary_polygon_line = shapely.plotting.plot_polygon(boundary_polygon)
+
+    mpl.show()
