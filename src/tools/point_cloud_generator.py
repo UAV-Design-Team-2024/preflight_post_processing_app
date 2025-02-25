@@ -101,12 +101,28 @@ def make_final_plot(points=None, boundary_polygon=None, path=None):
     """
     Plots the points, boundary polygon, and path on a map.
     """
+    fig, ax = mpl.subplots()
     if points:
         point_cloud = shapely.plotting.plot_points(points)
+        mpl.plot(points[0].x, points[0].y, 'og', label="Starting Point")
     if boundary_polygon:
-        boundary_polygon_line = shapely.plotting.plot_polygon(boundary_polygon)
+        boundary_polygon_line = shapely.plotting.plot_polygon(boundary_polygon, add_points=False)
     if path:
         path_output = LineString([points[i] for i in path])
-        path_line = shapely.plotting.plot_line(path_output)
+        # path_line = shapely.plotting.plot_line(path_output)
+        plot_line_with_arrows(path_output, ax)
+    ax.set_title('Optimized Flight Path')
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
+    ax.legend()
+    ax.set_aspect('equal', adjustable='box')
 
     mpl.show()
+
+
+def plot_line_with_arrows(line, ax, arrow_interval=1):
+    """Plots a Shapely LineString with arrows at specified intervals."""
+    x, y = line.xy
+    x = np.asarray(x)
+    y = np.asarray(y)
+    ax.quiver(x[:-1], y[:-1], x[1:]-x[:-1], y[1:]-y[:-1], scale_units='xy', angles='xy', scale=1)
