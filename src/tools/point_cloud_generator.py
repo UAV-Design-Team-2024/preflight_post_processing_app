@@ -6,7 +6,7 @@ import random
 import json
 
 import shapely.plotting
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Polygon, Point, LineString
 from cuopt_thin_client import CuOptServiceClient
 
 
@@ -72,16 +72,17 @@ def create_points_in_polygon(polygon, spacing, altitude):
 
     dist = np.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
     num_points = dist / spacing
-    print(num_points)
+
     xrange = np.linspace(minx, maxx, num=round(num_points))
     yrange = np.linspace(miny, maxy, num=round(num_points))
     points = []
-    while len(points) < num_points:
-        for x in xrange:
-            for y in yrange:
-                ordered_point = Point(x, y)
-                if polygon.contains(ordered_point):
-                    points.append(ordered_point)
+    for x in xrange:
+        for y in yrange:
+            ordered_point = Point(x, y)
+            if polygon.contains(ordered_point):
+                points.append(ordered_point)
+    print(f'Number of points: {len(points)}')
+    print(f'Maximum number of points: {round(num_points)**2}')
 
     return points
 
@@ -96,8 +97,16 @@ def make_points(filepath, height, spacing):
     points = create_points_in_polygon(boundary_polygon, spacing, altitude)
     return boundary_polygon, points, altitude
 
-def make_point_cloud_plot(points, boundary_polygon):
-    point_cloud = shapely.plotting.plot_points(points)
-    # boundary_polygon_line = shapely.plotting.plot_polygon(boundary_polygon)
+def make_final_plot(points=None, boundary_polygon=None, path=None):
+    """
+    Plots the points, boundary polygon, and path on a map.
+    """
+    if points:
+        point_cloud = shapely.plotting.plot_points(points)
+    if boundary_polygon:
+        boundary_polygon_line = shapely.plotting.plot_polygon(boundary_polygon)
+    if path:
+        path_output = LineString([points[i] for i in path])
+        path_line = shapely.plotting.plot_line(path_output)
 
     mpl.show()
