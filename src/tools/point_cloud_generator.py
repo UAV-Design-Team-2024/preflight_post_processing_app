@@ -1,4 +1,5 @@
 import os
+import multiprocessing
 import geopandas as gp
 import matplotlib.pyplot as mpl
 import numpy as np
@@ -36,18 +37,38 @@ def get_coord_matrix(points, alt):
         x1, y1, z1 = latlon_to_ecef(points[i].x, points[i].y, alt)
         coords.append((x1, y1))
     return coords
-def get_distance_matrix(points, alt):
-    distance = np.zeros((len(points), len(points)))
-    for i in range(int(len(points))):
-        x1,y1,z1 = latlon_to_ecef(points[i].x, points[i].y, alt)
-        for j in range(i+1, int(len(points))):
-            x2,y2,z2 = latlon_to_ecef(points[j].x, points[j].y, alt)
-            dist = np.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
-            distance[i][j] = dist
-    distance_matrix = distance + distance.T
-    print(distance_matrix.shape)
-    distance_matrix = distance_matrix.tolist()
-    return distance_matrix
+# def get_distance_matrix(points, alt):
+#     distance = np.zeros((len(points), len(points)))
+#     for i in range(int(len(points))):
+#         x1,y1,z1 = latlon_to_ecef(points[i].x, points[i].y, alt)
+#         for j in range(i+1, int(len(points))):
+#             x2,y2,z2 = latlon_to_ecef(points[j].x, points[j].y, alt)
+#             dist = np.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
+#             distance[i][j] = dist
+#     distance_matrix = distance + distance.T
+#     print(distance_matrix.shape)
+#     distance_matrix = distance_matrix.tolist()
+#     return distance_matrix
+
+def get_distance_row( x, y, z, row_index):
+    distances = np.array([np.sqrt((x[i]-x[row_index])**2 + (y[i]-y[row_index])**2 + (z[i]-z[row_index])**2) for i in range(row_index+1, len(x))])
+    row = np.concatenate((np.zeros(row_index+1), distances))
+    # row = np.array([np.sqrt((x[i]-x[row_index])**2 + (y[i]-y[row_index])**2 + (z[i]-z[row_index])**2) for i in range(len(x))])
+
+    return row
+
+def get_distance_matrix(points, alt, num_processes):
+    """Generates a matrix in parallel using multiprocessing."""
+    px = np.array([point.x for point in points])
+    py = np.array([point.y for point in points])
+    altitude = np.array([alt for i in range(len(points))])
+    x, y, z = latlon_to_ecef(px, py, altitude)
+    num_rows = len(points)
+    with multiprocessing.Pool(processes=num_processes) as pool:
+        rows = pool.starmap(get_distance_row, [(x, y, z, i) for i in range(num_rows)])
+    mat = np.array(rows)
+    dist_mat = (mat + mat.T).tolist()
+    return dist_mat
 
 def check_symmetric(a, rtol=1e-05, atol=1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)

@@ -21,7 +21,7 @@ import math
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 import sys
-# sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
+sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
 from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
 
 # [END import]
@@ -75,17 +75,18 @@ def main():
     # Instantiate the data problem.
     # [START data]
 
-    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
-    # kml_filepath = r"C:\Users\rohan\OneDrive - University of Cincinnati\UAV Design\preflight_post_processing_app\src\tests\test_data.kml"
+    # kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
+    kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
-    spacing = 50  # meters
+    spacing = 15  # meters
+    num_processes = 4
 
     boundary_polygon, points, altitude = make_points(kml_filepath, height, spacing)
     # coords = get_coord_matrix(points, altitude)
     # print(coords)
     # make_point_cloud_plot(points, boundary_polygon)
     print(f"Created {len(points)} points! Beginning distance matrix creation...")
-    distance_matrix = get_distance_matrix(points, altitude)
+    distance_matrix = get_distance_matrix(points, altitude, num_processes)
     # print(distance_matrix)
     print(f"Created distance matrix, creating data model...")
     data = create_data_model(distance_matrix)
