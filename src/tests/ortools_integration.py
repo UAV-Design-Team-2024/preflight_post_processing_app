@@ -14,6 +14,7 @@
 
 # [START program]
 """Simple Vehicles Routing Problem."""
+import time
 
 # [START import]
 import numpy as np
@@ -21,7 +22,7 @@ import math
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 import sys
-sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
+# sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
 from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
 
 # [END import]
@@ -34,8 +35,9 @@ def create_data_model(distance_matrix):
     data["distance_matrix"] = distance_matrix
     data["num_vehicles"] = 1
     # [START starts_ends]
-    data["depot"] = 0
     # [END starts_ends]
+    data["starts"] = [0]
+    data["ends"] = [1272]
     return data
     # [END data_model]
 
@@ -75,20 +77,22 @@ def main():
     # Instantiate the data problem.
     # [START data]
 
-    # kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
-    kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
+    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
+    # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
-    spacing = 15  # meters
-    num_processes = 4
+    spacing = 25  # meters
+    num_processes = 16
 
     boundary_polygon, points, altitude = make_points(kml_filepath, height, spacing)
     # coords = get_coord_matrix(points, altitude)
     # print(coords)
     # make_point_cloud_plot(points, boundary_polygon)
     print(f"Created {len(points)} points! Beginning distance matrix creation...")
-    distance_matrix = get_distance_matrix(points, altitude, num_processes)
+    tik = time.perf_counter()
+    distance_matrix = get_distance_matrix(points, altitude, num_processes, boundary_polygon)
+    tok = time.perf_counter()
     # print(distance_matrix)
-    print(f"Created distance matrix, creating data model...")
+    print(f"Created distance matrix in {tok-tik} s, creating data model...")
     data = create_data_model(distance_matrix)
     # [END data]
 
@@ -96,7 +100,7 @@ def main():
     # [START index_manager]
     print("Creating a manager...")
     manager = pywrapcp.RoutingIndexManager( 
-        len(data["distance_matrix"]), data["num_vehicles"], data["depot"]
+        len(data["distance_matrix"]), data["num_vehicles"], data["starts"], data["ends"]
     )
     # [END index_manager]
 
@@ -121,6 +125,7 @@ def main():
 
     # Define cost of each arc.
     # [START arc_cost]
+
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
     # [END arc_cost]
 

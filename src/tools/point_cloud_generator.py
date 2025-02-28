@@ -50,25 +50,53 @@ def get_coord_matrix(points, alt):
 #     distance_matrix = distance_matrix.tolist()
 #     return distance_matrix
 
-def get_distance_row( x, y, z, row_index):
-    distances = np.array([np.sqrt((x[i]-x[row_index])**2 + (y[i]-y[row_index])**2 + (z[i]-z[row_index])**2) for i in range(row_index+1, len(x))])
-    row = np.concatenate((np.zeros(row_index+1), distances))
-    # row = np.array([np.sqrt((x[i]-x[row_index])**2 + (y[i]-y[row_index])**2 + (z[i]-z[row_index])**2) for i in range(len(x))])
+def is_valid_edge(p1, p2, boundary_edges):
+    """
+    Check if a path between two points crosses the boundary edges.
+    """
+    line = LineString([p1.coords[0], p2.coords[0]])
 
+    # Edge is valid if it does NOT intersect any boundary edge
+    for boundary_edge in boundary_edges:
+        if line.intersects(boundary_edge) and not line.touches(boundary_edge):
+            return False
+    return True
+
+
+def get_distance_row(x, y, z, row_index, points, boundary_edges):
+    distances = np.array([
+        np.sqrt((x[i] - x[row_index]) ** 2 + (y[i] - y[row_index]) ** 2 + (z[i] - z[row_index]) ** 2)
+        if is_valid_edge(points[row_index], points[i], boundary_edges) else 1e6 for i in range(row_index + 1, len(x))
+    ])
+
+    row = np.concatenate((np.zeros(row_index + 1), distances))
     return row
 
-def get_distance_matrix(points, alt, num_processes):
+def get_distance_matrix(points, alt, num_processes, boundary_polygon):
     """Generates a matrix in parallel using multiprocessing."""
     px = np.array([point.x for point in points])
     py = np.array([point.y for point in points])
-    altitude = np.array([alt for i in range(len(points))])
+    altitude = np.array([alt for _ in range(len(points))])
+
     x, y, z = latlon_to_ecef(px, py, altitude)
     num_rows = len(points)
+
+    # Generate boundary edges as LineString objects
+    boundary_coords = list(boundary_polygon.exterior.coords)
+    boundary_edges = [LineString([boundary_coords[i], boundary_coords[i + 1]]) for i in range(len(boundary_coords) - 1)]
+
+    # Use multiprocessing for speed
     with multiprocessing.Pool(processes=num_processes) as pool:
-        rows = pool.starmap(get_distance_row, [(x, y, z, i) for i in range(num_rows)])
-    mat = np.array(rows)
-    dist_mat = (mat + mat.T).tolist()
-    return dist_mat
+        rows = pool.starmap(
+            get_distance_row,
+            [(x, y, z, i, points, boundary_edges) for i in range(num_rows)]
+        )
+
+    # Make the matrix symmetric
+    distance_matrix = np.array(rows)
+    distance_matrix = (distance_matrix + distance_matrix.T).tolist()
+
+    return distance_matrix
 
 def check_symmetric(a, rtol=1e-05, atol=1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)
