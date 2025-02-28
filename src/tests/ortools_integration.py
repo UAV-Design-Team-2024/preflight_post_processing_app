@@ -37,7 +37,7 @@ def create_data_model(distance_matrix):
     # [START starts_ends]
     # [END starts_ends]
     data["starts"] = [0]
-    data["ends"] = [1272]
+    data["ends"] = [len(distance_matrix)-1]
     return data
     # [END data_model]
 
@@ -80,7 +80,7 @@ def main():
     kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
     # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
-    spacing = 25  # meters
+    spacing = 15  # meters
     num_processes = 16
 
     boundary_polygon, points, altitude = make_points(kml_filepath, height, spacing)
@@ -165,6 +165,8 @@ def main():
         print(f"Solution found! Printing...")
         path_seq = return_solution(data, manager, routing, solution)
         make_final_plot(points, boundary_polygon, path_seq)
+    else:
+        print("No solution found...")
     # [END return_solution]
 
 
