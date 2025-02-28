@@ -80,10 +80,13 @@ def main():
     kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
     # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
-    spacing = 15  # meters
+    spacing = 10  # meters
     num_processes = 16
 
-    boundary_polygon, points, altitude = make_points(kml_filepath, height, spacing)
+
+    boundary_polygons, points, altitude = make_points(kml_filepath, height, spacing)
+
+
     # coords = get_coord_matrix(points, altitude)
     # print(coords)
     # make_point_cloud_plot(points, boundary_polygon)
