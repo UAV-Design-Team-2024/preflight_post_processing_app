@@ -7,12 +7,13 @@ import random
 import json
 
 import shapely.plotting
+from shapely.ops import split
 from shapely.geometry import Polygon, Point, LineString, box
 import shapely.ops as s_ops
 from cuopt_thin_client import CuOptServiceClient
 
 
-def latlon_to_ecef(lat_deg, lon_deg, alt_m=0):
+def latlon_to_ecef(lat_deg, lon_deg, alt_m):
     """
     Converts latitude, longitude (in degrees), and altitude (in meters) to
     ECEF coordinates.
@@ -150,7 +151,6 @@ def divide_boundary_polygon(boundary_polygon, cols):
 
     return split_polygons
 
-
 def create_points_in_polygon(polygon, spacing, altitude):
 
 
@@ -166,22 +166,16 @@ def create_points_in_polygon(polygon, spacing, altitude):
     """
     minx, miny, maxx, maxy = polygon.bounds
 
-    x1,y1,z1 = latlon_to_ecef(minx, miny, altitude)
-    x2,y2,z2 = latlon_to_ecef(maxx, maxy, altitude)
+    num_pointsx = (maxx - minx)*np.pi/180*(6378137.0 + altitude) / spacing
+    num_pointsy = (maxy - miny)*np.pi/180*(6378137.0 + altitude) / spacing
+    print('Number of Rows:', round(num_pointsx))
+    print('Number of Columns:', round(num_pointsy))
+    xrange = np.linspace(minx, maxx, num=round(num_pointsx))
+    yrange = np.linspace(miny, maxy, num=round(num_pointsy))
+    points = [Point(x, y) for x in xrange for y in yrange if polygon.contains(Point(x, y))]
 
-    dist = np.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
-    num_points = dist / spacing
-
-    xrange = np.linspace(minx, maxx, num=round(num_points))
-    yrange = np.linspace(miny, maxy, num=round(num_points))
-    points = []
-    for x in xrange:
-        for y in yrange:
-            ordered_point = Point(x, y)
-            if polygon.contains(ordered_point):
-                points.append(ordered_point)
     print(f'Number of points: {len(points)}')
-    print(f'Maximum number of points: {round(num_points)**2}')
+    print(f'Maximum number of points: {round(num_pointsx)*round(num_pointsy)}')
 
     return points
 
@@ -191,14 +185,14 @@ def make_points(filepath, height, spacing):
 
     altitude = np.array(kml_file['geometry'][0].coords)[0][2] + height # meters
     base_polygon = kml_file["geometry"][1]
-    # boundary_polygons = divide_boundary_polygon(base_polygon, 4)
-    boundary_polygons = generate_valid_splits(base_polygon, 3)
+    boundary_polygons = divide_boundary_polygon(base_polygon, 4)
+    # boundary_polygons = generate_valid_splits(base_polygon, 3)
 
     point_list = []
     for boundary_polygon in boundary_polygons:
         points = create_points_in_polygon(boundary_polygon, spacing, altitude)
         point_list.append(points)
-        shapely.plotting.plot_polygon(boundary_polygon.polygon)
+        shapely.plotting.plot_polygon(boundary_polygon)
         shapely.plotting.plot_points(points)
 
     # shapely.plotting.plot_polygon(base_polygon)
