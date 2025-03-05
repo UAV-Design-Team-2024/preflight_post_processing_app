@@ -14,6 +14,7 @@
 
 # [START program]
 """Simple Vehicles Routing Problem."""
+import multiprocessing
 import time
 
 # [START import]
@@ -71,38 +72,14 @@ def return_solution(data, manager, routing, solution):
     # [END solution_printer]
     return path_seq
 
-
-def main():
-    """Entry point of the program."""
-    # Instantiate the data problem.
-    # [START data]
-
-    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
-    # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
-    height = 4.5  # meters
-    spacing = 10  # meters
-    num_processes = 16
-
-
-    boundary_polygons, points, altitude = make_points(kml_filepath, height, spacing)
-
-
-    # coords = get_coord_matrix(points, altitude)
-    # print(coords)
-    # make_point_cloud_plot(points, boundary_polygon)
-    print(f"Created {len(points)} points! Beginning distance matrix creation...")
-    tik = time.perf_counter()
-    distance_matrix = get_distance_matrix(points, altitude, num_processes, boundary_polygon)
-    tok = time.perf_counter()
-    # print(distance_matrix)
-    print(f"Created distance matrix in {tok-tik} s, creating data model...")
+def run_solver(distance_matrix, points, boundary_polygon):
     data = create_data_model(distance_matrix)
     # [END data]
 
     # Create the routing index manager.
     # [START index_manager]
     print("Creating a manager...")
-    manager = pywrapcp.RoutingIndexManager( 
+    manager = pywrapcp.RoutingIndexManager(
         len(data["distance_matrix"]), data["num_vehicles"], data["starts"], data["ends"]
     )
     # [END index_manager]
@@ -111,6 +88,7 @@ def main():
     # [START routing_model]
     print("Starting routing model...")
     routing = pywrapcp.RoutingModel(manager)
+
     # [END routing_model]
 
     # Create and register a transit callback.
@@ -156,7 +134,6 @@ def main():
         routing_enums_pb2.LocalSearchMetaheuristic.AUTOMATIC)
     # search_parameters.time_limit.seconds = 60 * 3
 
-
     search_parameters.log_search = True
     # [END parameters]
 
@@ -171,6 +148,49 @@ def main():
     else:
         print("No solution found...")
     # [END return_solution]
+
+def main():
+    """Entry point of the program."""
+    # Instantiate the data problem.
+    # [START data]
+
+    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
+    # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
+    height = 4.5  # meters
+    spacing = 10  # meters
+    num_processes = 8
+    num_sections = 5
+
+    boundary_polygons, point_lists, altitude = make_points(kml_filepath, height, spacing, num_sections)
+
+
+    # coords = get_coord_matrix(points, altitude)
+    # print(coords)
+    # make_point_cloud_plot(points, boundary_polygon)
+    # with multiprocessing.Pool(processes=num_processes) as pool:
+    #     # print(f"Created {len(points)} points! Beginning distance matrix creation...")
+    #     tik = time.perf_counter()
+    #     # distance_matrix = get_distance_matrix(points, altitude, num_processes, boundary_polygon)
+    #     distance_matrix = pool.starmap(get_distance_matrix,
+    #         [(point_lists[i], altitude, 4, boundary_polygons[i]) for i in range(len(boundary_polygons))])
+    #     tok = time.perf_counter()
+    #     print(f"Created distance matrix in {tok-tik} s, creating data model...")
+    distance_matrices = []
+    time_list = []
+    for i in range(num_sections):
+        tik = time.perf_counter()
+        distance_matrix = get_distance_matrix(point_lists[i], altitude, num_processes, boundary_polygons[i])
+        distance_matrices.append(distance_matrix)
+        tok = time.perf_counter()
+        time_list.append(tok-tik)
+        print(f"Created distance matrix {i+1} in {tok-tik} s, creating data model...")
+
+    # # multiprocess loop for each distance matrix in distance matrices
+    # with multiprocessing.Pool(processes=num_processes) as pool:
+    #     sol = pool.starmap(run_solver, [(distance_matrices[i], point_lists[i], boundary_polygons[i]) for i in range(num_sections)])
+    # # print(distance_matrix)
+
+    print(f"Times for pre-processing: {time_list}")
 
 
 if __name__ == "__main__":

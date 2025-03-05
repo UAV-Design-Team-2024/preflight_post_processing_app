@@ -138,6 +138,33 @@ def get_distance_matrix(points, alt, num_processes, boundary_polygon):
 
     return distance_matrix
 
+def get_distance_matrix_nonparallel(points, alt, num_processes, boundary_polygon):
+    """Generates a matrix in parallel using multiprocessing."""
+    px = np.array([point.x for point in points])
+    py = np.array([point.y for point in points])
+    altitude = np.array([alt for _ in range(len(points))])
+
+    x, y, z = latlon_to_ecef(px, py, altitude)
+    num_rows = len(points)
+
+    # Generate boundary edges as LineString objects
+    boundary_coords = list(boundary_polygon.exterior.coords)
+    boundary_edges = [LineString([boundary_coords[i], boundary_coords[i + 1]]) for i in range(len(boundary_coords) - 1)]
+
+    # Use multiprocessing for speed
+    # with multiprocessing.Pool(processes=num_processes) as pool:
+    #     rows = pool.starmap(
+    rows = []
+    for i in range(num_rows):
+        rows.append(get_distance_row(x, y, z, i, points, boundary_edges))
+        # )
+
+    print("Generating distance matrix...")
+    # Make the matrix symmetric
+    distance_matrix = np.array(rows)
+    distance_matrix = (distance_matrix + distance_matrix.T).tolist()
+
+    return distance_matrix
 def check_symmetric(a, rtol=1e-05, atol=1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)
 
@@ -180,12 +207,12 @@ def create_points_in_polygon(polygon, spacing, altitude):
     return points
 
 
-def make_points(filepath, height, spacing):
+def make_points(filepath, height, spacing, num_sections):
     kml_file = gp.read_file(f'{filepath}', layer='QGroundControl Plan KML')
 
     altitude = np.array(kml_file['geometry'][0].coords)[0][2] + height # meters
     base_polygon = kml_file["geometry"][1]
-    boundary_polygons = divide_boundary_polygon(base_polygon, 4)
+    boundary_polygons = divide_boundary_polygon(base_polygon, num_sections)
     # boundary_polygons = generate_valid_splits(base_polygon, 3)
 
     point_list = []
