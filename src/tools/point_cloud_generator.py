@@ -221,7 +221,7 @@ def make_points(filepath, height, spacing, num_sections):
         point_list.append(points)
         shapely.plotting.plot_polygon(boundary_polygon)
         shapely.plotting.plot_points(points)
-
+    # print(point_list[0])
     # shapely.plotting.plot_polygon(base_polygon)
     mpl.show()
 
