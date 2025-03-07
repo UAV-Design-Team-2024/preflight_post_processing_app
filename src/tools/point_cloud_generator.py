@@ -10,6 +10,7 @@ import shapely.plotting
 from shapely.ops import split
 from shapely.geometry import Polygon, Point, LineString, box
 import shapely.ops as s_ops
+from shapely.ops import unary_union
 from cuopt_thin_client import CuOptServiceClient
 
 
@@ -53,42 +54,42 @@ def is_valid_edge(p1, p2, boundary_edges):
     return True
 
 
-def generate_valid_splits(boundary_polygon, num_splits, max_attempts=5, shift_step=0.1):
-    """
-    Generates vertical lines that only cross two boundary edges.
-    Retries failed lines by shifting left or right.
-    """
-    minx, miny, maxx, maxy = boundary_polygon.bounds
-    step_size = (maxx - minx) / (num_splits + 1)  # Ensure splits stay inside
-    valid_splits = []
+# def generate_valid_splits(boundary_polygon, num_splits, max_attempts=5, shift_step=0.1):
+#     """
+#     Generates vertical lines that only cross two boundary edges.
+#     Retries failed lines by shifting left or right.
+#     """
+#     minx, miny, maxx, maxy = boundary_polygon.bounds
+#     step_size = (maxx - minx) / (num_splits + 1)  # Ensure splits stay inside
+#     valid_splits = []
 
-    # Extract boundary edges
-    boundary_edges = [LineString([boundary_polygon.exterior.coords[i], boundary_polygon.exterior.coords[i + 1]])
-                      for i in range(len(boundary_polygon.exterior.coords) - 1)]
+#     # Extract boundary edges
+#     boundary_edges = [LineString([boundary_polygon.exterior.coords[i], boundary_polygon.exterior.coords[i + 1]])
+#                       for i in range(len(boundary_polygon.exterior.coords) - 1)]
 
-    print("Attempting to split...")
-    for i in range(1, num_splits + 1):
-        x_coord = minx + i * step_size
-        attempts = 0
-        print(f"Attempt {attempts+1}")
-        while attempts < max_attempts:
-            vertical_line = LineString([(x_coord, miny - 1), (x_coord, maxy + 1)])  # Extend beyond bounds
+#     print("Attempting to split...")
+#     for i in range(1, num_splits + 1):
+#         x_coord = minx + i * step_size
+#         attempts = 0
+#         print(f"Attempt {attempts+1}")
+#         while attempts < max_attempts:
+#             vertical_line = LineString([(x_coord, miny - 1), (x_coord, maxy + 1)])  # Extend beyond bounds
 
-            # Count how many boundary edges this line intersects
-            intersections = [edge for edge in boundary_edges if vertical_line.intersects(edge)]
+#             # Count how many boundary edges this line intersects
+#             intersections = [edge for edge in boundary_edges if vertical_line.intersects(edge)]
 
-            if len(intersections) == 2:
-                valid_splits.append(vertical_line)
-                break  # Stop shifting once a valid line is found
-            else:
-                # Retry by shifting slightly left or right
-                shift_direction = -1 if attempts % 2 == 0 else 1  # Alternate left and right
-                x_coord += shift_direction * shift_step
-                attempts += 1
+#             if len(intersections) == 2:
+#                 valid_splits.append(vertical_line)
+#                 break  # Stop shifting once a valid line is found
+#             else:
+#                 # Retry by shifting slightly left or right
+#                 shift_direction = -1 if attempts % 2 == 0 else 1  # Alternate left and right
+#                 x_coord += shift_direction * shift_step
+#                 attempts += 1
 
-    split_polygons = [s_ops.split(boundary_polygon, valid_split) for valid_split in valid_splits]
-    print("Managed to split, continuing...")
-    return split_polygons
+#     split_polygons = [s_ops.split(boundary_polygon, valid_split) for valid_split in valid_splits]
+#     print("Managed to split, continuing...")
+#     return split_polygons
 
 
 def get_distance_row(x, y, z, row_index, points, boundary_edges):
@@ -168,7 +169,8 @@ def divide_boundary_polygon(boundary_polygon, cols):
 
     grid_cells = [box(minx + i * width, miny + height, minx + (i + 1) * width, miny * height) for i in range(cols)]
     split_polygons = [cell.intersection(boundary_polygon) for cell in grid_cells if cell.intersects(boundary_polygon)]
-
+    print(grid_cells)
+    # shapely.plotting.plot_polygon(grid_cells[0])
     return split_polygons
 
 def create_points_in_polygon(polygon, spacing, altitude):
@@ -209,6 +211,40 @@ def create_points_in_polygon(polygon, spacing, altitude):
 
     return points, length_cols
 
+def create_points_on_boundary(polygon, spacing, altitude):
+    boundary = polygon.boundary
+
+    # Find the rightmost x-coordinate
+    max_x = max(x for x, y, z in polygon.exterior.coords)
+    y_values = [y for x, y, z in polygon.exterior.coords if x == max_x]
+
+    # Get min and max y-values
+    min_y = min(y_values)
+    max_y = max(y_values)
+
+    # Extract the right boundary (edges where x == max_x)
+    right_edges = []
+    coords = list(polygon.exterior.coords)
+
+    for i in range(len(coords) - 1):  # Iterate through edges
+        x1, y1, z1 = coords[i]
+        x2, y2, z2 = coords[i + 1]
+        if x1 == max_x and x2 == max_x:
+            right_edges.append(LineString([(x1, y1), (x2, y2)]))
+
+    # Merge right boundary edges into one line
+    right_boundary = unary_union(right_edges)
+
+    # Generate points along the right boundary
+    num_points = round((max_y - min_y)*np.pi/180*(6378137.0 + altitude) / spacing)  # Number of points to generate
+    points = [right_boundary.interpolate(i / (num_points - 1), normalized=True) for i in range(num_points)]
+    adjusted_points = [Point(p.x - 0.00000000001, p.y) for p in points]
+    sorted_points = sorted(adjusted_points, key=lambda p: p.y)
+    final_points = [Point(p.x, p.y) for p in sorted_points if polygon.contains(p)]
+    length_col = [len(final_points)]
+
+    return final_points, length_col
+
 
 def make_points(filepath, height, spacing, num_sections):
     kml_file = gp.read_file(f'{filepath}', layer='QGroundControl Plan KML')
@@ -221,11 +257,18 @@ def make_points(filepath, height, spacing, num_sections):
     point_list = []
     length_cols = []
     for boundary_polygon in boundary_polygons:
-        points, len_col = create_points_in_polygon(boundary_polygon, spacing, altitude)
-        point_list.append(points)
-        length_cols.append(len_col)
+    # for i in range(len(boundary_polygons)):
+        points, len_col= create_points_in_polygon(boundary_polygon, spacing, altitude)
+        points_boundary, len_col_boundary = create_points_on_boundary(boundary_polygon, spacing, altitude)
+        total_points = points + points_boundary
+        total_cols = len_col + len_col_boundary
+        point_list.append(total_points)
+        # point_list.append(points)
+        # point_list.append(points_boundary)
+        length_cols.append(total_cols)
         shapely.plotting.plot_polygon(boundary_polygon)
-        shapely.plotting.plot_points(points)
+        shapely.plotting.plot_points(total_points)
+        # shapely.plotting.plot_points(points_boundary)
     # print(point_list[0])
     # shapely.plotting.plot_polygon(base_polygon)
     mpl.show()

@@ -23,7 +23,7 @@ import math
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 import sys
-# sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
+sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
 from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
 
 # [END import]
@@ -121,7 +121,6 @@ def run_solver(distance_matrix, points, boundary_polygon, length_col, use_initia
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
 
     # [END arc_cost]
-
     # Add Distance constraint.
     # [START distance_constraint]
     # dimension_name = "Distance"
@@ -178,13 +177,13 @@ def main():
     # Instantiate the data problem.
     # [START data]
 
-    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
-    # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
+    # kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
+    kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
     spacing = 10  # meters
-    num_processes = 4
+    num_processes = 5
     num_sections = 5
-    use_initial_solution = False
+    use_initial_solution = True
     boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections)
 
     distance_matrices = []
