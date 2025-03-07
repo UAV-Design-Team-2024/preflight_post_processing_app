@@ -92,11 +92,16 @@ def generate_valid_splits(boundary_polygon, num_splits, max_attempts=5, shift_st
 
 
 def get_distance_row(x, y, z, row_index, points, boundary_edges):
-    distances = np.array([
-        np.sqrt((x[i] - x[row_index]) ** 2 + (y[i] - y[row_index]) ** 2 + (z[i] - z[row_index]) ** 2)
-        if is_valid_edge(points[row_index], points[i], boundary_edges) else 1e6 for i in range(row_index + 1, len(x))
-    ])
-
+    distances = []
+    for i in range(row_index +1, len(x)):
+        if is_valid_edge(points[row_index], points[i], boundary_edges):
+            base_distance = np.sqrt((x[i] - x[row_index]) ** 2 + (y[i] - y[row_index]) ** 2 + (z[i] - z[row_index]) ** 2)
+            distances.append(base_distance)
+        else:
+            distances.append(1e6)
+    # distances_no_costs = [x for x in distances if x != 1e6]
+    # print(max(distances_no_costs))
+    distances = np.array(distances)
     row = np.concatenate((np.zeros(row_index + 1), distances))
     return row
 

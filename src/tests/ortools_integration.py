@@ -114,16 +114,12 @@ def run_solver(distance_matrix, points, boundary_polygon, length_col, use_initia
         # Convert from routing variable Index to distance matrix NodeIndex.
         from_node = manager.IndexToNode(from_index)
         to_node = manager.IndexToNode(to_index)
-        callback = data["distance_matrix"][from_node][to_node]
-        return int(callback)
-    
+        distance_matrix = data["distance_matrix"]
+        cost = distance_matrix[from_node][to_node]
+        return int(cost)
     transit_callback_index = routing.RegisterTransitCallback(distance_callback)
-    # [END transit_callback]
-
-    # Define cost of each arc.
-    # [START arc_cost]
-
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
+
     # [END arc_cost]
 
     # Add Distance constraint.
@@ -148,6 +144,15 @@ def run_solver(distance_matrix, points, boundary_polygon, length_col, use_initia
     )
     search_parameters.local_search_metaheuristic = (
         routing_enums_pb2.LocalSearchMetaheuristic.AUTOMATIC)
+    #
+    # search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+    # search_parameters.first_solution_strategy = (
+    #     routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    # )  # Prefer shortest paths
+    # search_parameters.local_search_metaheuristic = (
+    #     routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+    # )  # Optimize paths iteratively
+    search_parameters.time_limit.seconds = 30
     # search_parameters.time_limit.seconds = 60 * 3
     search_parameters.log_search = True
     # [END parameters]
