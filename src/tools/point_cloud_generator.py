@@ -53,6 +53,8 @@ def is_valid_edge(p1, p2, boundary_edges):
             return False
     return True
 
+def is_valid_edge_for_points(p1, p2, boundary):
+    return boundary.contains(Point((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2))
 
 # def generate_valid_splits(boundary_polygon, num_splits, max_attempts=5, shift_step=0.1):
 #     """
