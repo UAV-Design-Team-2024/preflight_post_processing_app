@@ -23,14 +23,14 @@ import math
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 import sys
-sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
+# sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
 from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
 
 # [END import]
 
 
 # [START data_model]
-def create_data_model(distance_matrix, init_route):
+def create_data_model(distance_matrix, init_route=None):
     """Stores the data for the problem."""
     data = {}
     data["distance_matrix"] = distance_matrix
@@ -39,24 +39,19 @@ def create_data_model(distance_matrix, init_route):
     # [END starts_ends]
     data["starts"] = [0]
     data["ends"] = [len(distance_matrix)-1]
-    data["initial_routes"] = [init_route]
+    if init_route is not None:
+        data["initial_routes"] = [init_route]
     #https://developers.google.com/optimization/routing/routing_tasks#:~:text=SolutionLimit(100);-,Setting%20initial%20routes%20for%20a%20search,solution%20using%20the%20method%20ReadAssignmentFromRoutes%20.
     return data
     # [END data_model]
 def create_initial_route(distance_matrix, length_cols):
     init_route = np.arange(0, len(distance_matrix), 1).tolist()
-    print(init_route)
-    sum = 0
-    print(length_cols)
     start = 0
     init_routes = []
     for size in length_cols:
         init_routes.append(init_route[start:start+size])
         start += size
     for i in range(1,len(init_routes),2):
-        # sum += length_cols[i]
-        # print(f"Going from {sum} to {length_cols[i]+sum+1}, which yields {np.flip(init_route[sum:length_cols[i]+sum+1])}\n")
-        # init_route[sum:length_cols[i]+sum+1] = np.flip(init_route[sum:length_cols[i]+sum+1])
         init_routes[i].reverse()
     finalized_init_route = [point for sublist in init_routes for point in sublist]
     return finalized_init_route
@@ -91,12 +86,13 @@ def return_solution(data, manager, routing, solution):
     # [END solution_printer]
     return path_seq
 
-def run_solver(distance_matrix, points, boundary_polygon, length_col):
-    initial_route = create_initial_route(distance_matrix, length_col)
-    data = create_data_model(distance_matrix, initial_route)
-    # [END data]
+def run_solver(distance_matrix, points, boundary_polygon, length_col, use_initial_solution):
+    if use_initial_solution:
+        initial_route = create_initial_route(distance_matrix, length_col)
+        data = create_data_model(distance_matrix, initial_route)
+    else:
+        data = create_data_model(distance_matrix)
 
-    # Create the routing index manager.
     # [START index_manager]
     print("Creating a manager...")
     manager = pywrapcp.RoutingIndexManager(
@@ -156,12 +152,14 @@ def run_solver(distance_matrix, points, boundary_polygon, length_col):
     search_parameters.log_search = True
     # [END parameters]
     routing.CloseModelWithParameters(search_parameters)
-    initial_solution = routing.ReadAssignmentFromRoutes(data["initial_routes"], True)
+    if use_initial_solution:
+        initial_solution = routing.ReadAssignmentFromRoutes(data["initial_routes"], True)
+        solution = routing.SolveFromAssignmentWithParameters(initial_solution, search_parameters)
+    else:
+        solution = routing.SolveWithParameters(search_parameters)
     # Solve the problem.
     # [START solve]
     print("Beginning solve...")
-    # solution = routing.SolveWithParameters(search_parameters)
-    solution = routing.SolveFromAssignmentWithParameters(initial_solution, search_parameters)
     if solution:
         print(f"Solution found! Printing...")
         path_seq = return_solution(data, manager, routing, solution)
@@ -175,27 +173,15 @@ def main():
     # Instantiate the data problem.
     # [START data]
 
-    # kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
-    kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
+    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
+    # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
     spacing = 10  # meters
     num_processes = 4
     num_sections = 5
-
+    use_initial_solution = False
     boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections)
 
-
-    # coords = get_coord_matrix(points, altitude)
-    # print(coords)
-    # make_point_cloud_plot(points, boundary_polygon)
-    # with multiprocessing.Pool(processes=num_processes) as pool:
-    #     # print(f"Created {len(points)} points! Beginning distance matrix creation...")
-    #     tik = time.perf_counter()
-    #     # distance_matrix = get_distance_matrix(points, altitude, num_processes, boundary_polygon)
-    #     distance_matrix = pool.starmap(get_distance_matrix,
-    #         [(point_lists[i], altitude, 4, boundary_polygons[i]) for i in range(len(boundary_polygons))])
-    #     tok = time.perf_counter()
-    #     print(f"Created distance matrix in {tok-tik} s, creating data model...")
     distance_matrices = []
     time_list = []
     for i in range(num_sections):
@@ -208,7 +194,7 @@ def main():
 
     # # multiprocess loop for each distance matrix in distance matrices
     with multiprocessing.Pool(processes=num_processes) as pool:
-        sol = pool.starmap(run_solver, [(distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i]) for i in range(num_sections)])
+        sol = pool.starmap(run_solver, [(distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], use_initial_solution) for i in range(num_sections)])
     # print(distance_matrix)
 
     print(f"Times for pre-processing: {time_list}")
