@@ -30,7 +30,7 @@ from src.tools.point_cloud_generator import make_points, get_distance_matrix, ma
 
 
 # [START data_model]
-def create_data_model(distance_matrix):
+def create_data_model(distance_matrix, init_route):
     """Stores the data for the problem."""
     data = {}
     data["distance_matrix"] = distance_matrix
@@ -39,10 +39,27 @@ def create_data_model(distance_matrix):
     # [END starts_ends]
     data["starts"] = [0]
     data["ends"] = [len(distance_matrix)-1]
-    data["initial_routes"] = [(np.arange(0, len(distance_matrix), 1)).tolist()]
+    data["initial_routes"] = [init_route]
     #https://developers.google.com/optimization/routing/routing_tasks#:~:text=SolutionLimit(100);-,Setting%20initial%20routes%20for%20a%20search,solution%20using%20the%20method%20ReadAssignmentFromRoutes%20.
     return data
     # [END data_model]
+def create_initial_route(distance_matrix, length_cols):
+    init_route = np.arange(0, len(distance_matrix), 1).tolist()
+    print(init_route)
+    sum = 0
+    print(length_cols)
+    start = 0
+    init_routes = []
+    for size in length_cols:
+        init_routes.append(init_route[start:start+size])
+        start += size
+    for i in range(1,len(init_routes),2):
+        # sum += length_cols[i]
+        # print(f"Going from {sum} to {length_cols[i]+sum+1}, which yields {np.flip(init_route[sum:length_cols[i]+sum+1])}\n")
+        # init_route[sum:length_cols[i]+sum+1] = np.flip(init_route[sum:length_cols[i]+sum+1])
+        init_routes[i].reverse()
+    finalized_init_route = [point for sublist in init_routes for point in sublist]
+    return finalized_init_route
 
 
 # [START solution_printer]
@@ -74,8 +91,9 @@ def return_solution(data, manager, routing, solution):
     # [END solution_printer]
     return path_seq
 
-def run_solver(distance_matrix, points, boundary_polygon):
-    data = create_data_model(distance_matrix)
+def run_solver(distance_matrix, points, boundary_polygon, length_col):
+    initial_route = create_initial_route(distance_matrix, length_col)
+    data = create_data_model(distance_matrix, initial_route)
     # [END data]
 
     # Create the routing index manager.
@@ -135,8 +153,7 @@ def run_solver(distance_matrix, points, boundary_polygon):
     search_parameters.local_search_metaheuristic = (
         routing_enums_pb2.LocalSearchMetaheuristic.AUTOMATIC)
     # search_parameters.time_limit.seconds = 60 * 3
-
-    # search_parameters.log_search = True
+    search_parameters.log_search = True
     # [END parameters]
     routing.CloseModelWithParameters(search_parameters)
     initial_solution = routing.ReadAssignmentFromRoutes(data["initial_routes"], True)
@@ -165,7 +182,7 @@ def main():
     num_processes = 4
     num_sections = 5
 
-    boundary_polygons, point_lists, altitude = make_points(kml_filepath, height, spacing, num_sections)
+    boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections)
 
 
     # coords = get_coord_matrix(points, altitude)
@@ -191,7 +208,7 @@ def main():
 
     # # multiprocess loop for each distance matrix in distance matrices
     with multiprocessing.Pool(processes=num_processes) as pool:
-        sol = pool.starmap(run_solver, [(distance_matrices[i], point_lists[i], boundary_polygons[i]) for i in range(num_sections)])
+        sol = pool.starmap(run_solver, [(distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i]) for i in range(num_sections)])
     # print(distance_matrix)
 
     print(f"Times for pre-processing: {time_list}")

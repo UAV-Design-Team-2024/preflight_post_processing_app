@@ -199,12 +199,22 @@ def create_points_in_polygon(polygon, spacing, altitude):
     print('Number of Columns:', round(num_pointsy))
     xrange = np.linspace(minx, maxx, num=round(num_pointsx))
     yrange = np.linspace(miny, maxy, num=round(num_pointsy))
-    points = [Point(x, y) for x in xrange for y in yrange if polygon.contains(Point(x, y))]
-
+    # points = [Point(x, y) for x in xrange for y in yrange if polygon.contains(Point(x, y))]
+    points = []
+    length_cols = []
+    for x in xrange:
+        count = 0
+        for y in yrange:
+            if polygon.contains(Point(x, y)):
+                points.append(Point(x, y))
+                count += 1
+        if count > 0:
+            length_cols.append(count)
+    print(length_cols)
     print(f'Number of points: {len(points)}')
     print(f'Maximum number of points: {round(num_pointsx)*round(num_pointsy)}')
 
-    return points
+    return points, length_cols
 
 
 def make_points(filepath, height, spacing, num_sections):
@@ -216,16 +226,18 @@ def make_points(filepath, height, spacing, num_sections):
     # boundary_polygons = generate_valid_splits(base_polygon, 3)
 
     point_list = []
+    length_cols = []
     for boundary_polygon in boundary_polygons:
-        points = create_points_in_polygon(boundary_polygon, spacing, altitude)
+        points, len_col = create_points_in_polygon(boundary_polygon, spacing, altitude)
         point_list.append(points)
+        length_cols.append(len_col)
         shapely.plotting.plot_polygon(boundary_polygon)
         shapely.plotting.plot_points(points)
     # print(point_list[0])
     # shapely.plotting.plot_polygon(base_polygon)
     mpl.show()
 
-    return boundary_polygons, point_list, altitude
+    return boundary_polygons, point_list, altitude, length_cols
 
 def make_final_plot(points=None, boundary_polygon=None, path=None):
     """
