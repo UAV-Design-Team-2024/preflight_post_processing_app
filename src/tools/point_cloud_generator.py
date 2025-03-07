@@ -39,18 +39,6 @@ def get_coord_matrix(points, alt):
         x1, y1, z1 = latlon_to_ecef(points[i].x, points[i].y, alt)
         coords.append((x1, y1))
     return coords
-# def get_distance_matrix(points, alt):
-#     distance = np.zeros((len(points), len(points)))
-#     for i in range(int(len(points))):
-#         x1,y1,z1 = latlon_to_ecef(points[i].x, points[i].y, alt)
-#         for j in range(i+1, int(len(points))):
-#             x2,y2,z2 = latlon_to_ecef(points[j].x, points[j].y, alt)
-#             dist = np.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
-#             distance[i][j] = dist
-#     distance_matrix = distance + distance.T
-#     print(distance_matrix.shape)
-#     distance_matrix = distance_matrix.tolist()
-#     return distance_matrix
 
 def is_valid_edge(p1, p2, boundary_edges):
     """
