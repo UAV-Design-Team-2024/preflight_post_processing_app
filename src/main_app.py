@@ -15,6 +15,7 @@ import pandas as pd
 # from helpers.dash_app.main_dash_app import dash_data_app
 from tools.units import units, unit_system
 from ui.widgets.drone_presets.drone_preset_window import DronePresetWindow
+from ui.widgets.path_optimization.path_optimization_window import PathOptimizationWindow
 logger = logging.getLogger()
 logger.setLevel(0)
 
@@ -85,6 +86,10 @@ class uc_agriculture_app(QApplication):
     def create_drone_preset_window(self):
         self.drone_preset_window = DronePresetWindow()
         self.drone_preset_window.show()
+
+    def create_path_optimization_window(self):
+        self.path_optimization_window = PathOptimizationWindow()
+        self.path_optimization_window.show()
 
     def create_dash_urls(self):
         self.dash_app = dash_data_app("/test_dash_app/")

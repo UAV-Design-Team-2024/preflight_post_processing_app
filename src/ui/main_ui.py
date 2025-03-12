@@ -63,6 +63,7 @@ class MainUI(QWidget):
         self.flight_opt_label.setAlignment(PySide6.QtCore.Qt.AlignCenter)
 
         self.create_flight_plan_btn = QPushButton("Create a Flight Plan")
+        self.create_flight_plan_btn.clicked.connect(app.create_path_optimization_window)
 
         # endregion
 
