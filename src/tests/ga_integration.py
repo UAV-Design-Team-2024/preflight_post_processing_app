@@ -56,7 +56,10 @@ def two_opt(route, G, invalid_penalty_cost, tol):
                     improved = True  # Keep optimizing
 
     return best_route
-
+def parallel_fitness_evaluation(population, G, invalid_penalty_cost):
+    with multiprocessing.Pool(processes=5) as pool:
+        fitness_values = pool.starmap(fitness, [(ind, G, invalid_penalty_cost) for ind in population])
+    return fitness_values
 def fitness(route, G, invalid_penalty_cost):
     total_distance = 0
 
@@ -134,21 +137,24 @@ def genetic_algorithm_base(G, initial_solution, pop_size, generations, dM, best_
         population = [random.sample(nodes, len(nodes)) for _ in range(pop_size)]
 
     print(f"Created base population for section {section_number+1}")
+    tik = time.perf_counter()
     for gen_num in range(generations):
-        fitted_population = sorted(population, key=lambda x: fitness(x, G, penalty_cost))
-        minimized_fitted_population = fitted_population[:best_criteria_num]
-        best_distance = fitness(fitted_population[0], G, penalty_cost)
+        fitted_population = parallel_fitness_evaluation(population, G, penalty_cost)
+        minimized_fitted_population = [x for _, x in sorted(zip(fitted_population, population))]
+        best_distance = min(fitted_population)
         best_distances_per_generation.append(best_distance)
 
         while len(minimized_fitted_population) < pop_size: # Main GA loop here
+            print("Here")
             parent1, parent2 = random.choices(fitted_population[:50], k=2)
             child = mutation(crossover(parent1, parent2, G), dM, G) # Crossover and mutation happens here
             if fitness(child, G, penalty_cost) < penalty_cost:
                 minimized_fitted_population.append(child)
 
         population = minimized_fitted_population
-
-    print(f"Beginning two-opt for {section_number+1}...")
+    tok = time.perf_counter()
+    print(f"Completed {generations} generations in {tok-tik} ")
+    print(f"Beginning two-opt for section {section_number+1}...")
     final_route = two_opt(min(population, key=lambda x: fitness(x, G, penalty_cost)), G,
                           penalty_cost, minimum_percent_improvement) # Gets the absolute best route and distance
     best_dist = fitness(final_route, G, penalty_cost) #Re fit this for good measure
@@ -160,11 +166,11 @@ def run_genetic_algorithm(section_number, distance_matrix, points, boundary_poly
                           pop_size,
                           generations, dM,
                           best_criteria_num, penalty_cost, minimum_percent_improvement,
-                          plot):
+                          plot_initial_solutions, plot_solutions):
 
     print(f"Initialized process for section {section_number + 1}")
     initial_route = create_initial_route(distance_matrix, length_col)
-    if plot:
+    if plot_initial_solutions:
         make_final_plot(points, boundary_polygon, initial_route)
 
     distance_matrix = np.asarray(distance_matrix)
@@ -183,7 +189,7 @@ def run_genetic_algorithm(section_number, distance_matrix, points, boundary_poly
                                                                                    best_criteria_num, penalty_cost,
                                                                                    minimum_percent_improvement, section_number)
     # print(f"Final route was: {final_route}, with a distance of: {best_dist}")
-    if plot:
+    if plot_solutions:
         make_final_plot(points, boundary_polygon, final_route)
 def main():
     """Entry point of the program."""
@@ -193,19 +199,20 @@ def main():
     kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
     # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
-    spacing = 15 # meters
+    spacing = 20 # meters
     num_processes = 5
     num_sections = 5
 
-    pop_size = 200
-    generations = 200
-    dM = 0.5
+    pop_size = 100
+    generations = 100
+    dM = 0.1
     best_criteria_num = 10
 
     minimum_percent_improvement = 2 # in percent
     penalty_cost = float('inf')
 
     plot_sections = False
+    plot_initial_solutions = False
     plot_solutions = True
     boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
 
@@ -242,11 +249,17 @@ def main():
     print(f"Times for pre-processing: {prep_time}")
 
     # multiprocess loop for each distance matrix in distance matrices
-    with multiprocessing.Pool(processes=num_processes) as pool:
-        sol = pool.starmap(run_genetic_algorithm, [(i, distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i],  pop_size,
+    for i in range(num_sections):
+        run_genetic_algorithm(i, distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], pop_size,
                           generations, dM,
                           best_criteria_num, penalty_cost, minimum_percent_improvement,
-                          plot_solutions) for i in range(num_sections)])
+                          plot_initial_solutions, plot_solutions)
+
+    # with multiprocessing.Pool(processes=num_processes) as pool:
+    #     sol = pool.starmap(run_genetic_algorithm, [(i, distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i],  pop_size,
+    #                       generations, dM,
+    #                       best_criteria_num, penalty_cost, minimum_percent_improvement,
+    #                       plot_initial_solutions, plot_solutions) for i in range(num_sections)])
 
 
 

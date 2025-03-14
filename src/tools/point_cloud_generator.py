@@ -168,7 +168,7 @@ def divide_boundary_polygon(boundary_polygon, cols):
 
     grid_cells = [box(minx + i * width, miny + height, minx + (i + 1) * width, miny * height) for i in range(cols)]
     split_polygons = [cell.intersection(boundary_polygon) for cell in grid_cells if cell.intersects(boundary_polygon)]
-    print(grid_cells)
+    # print(grid_cells)
     # shapely.plotting.plot_polygon(grid_cells[0])
     return split_polygons
 
@@ -189,8 +189,8 @@ def create_points_in_polygon(polygon, spacing, altitude):
 
     num_pointsx = (maxx - minx)*np.pi/180*(6378137.0 + altitude) / spacing
     num_pointsy = (maxy - miny)*np.pi/180*(6378137.0 + altitude) / spacing
-    print('Number of Rows:', round(num_pointsx))
-    print('Number of Columns:', round(num_pointsy))
+    # print('Number of Rows:', round(num_pointsx))
+    # print('Number of Columns:', round(num_pointsy))
     xrange = np.linspace(minx, maxx, num=round(num_pointsx))
     yrange = np.linspace(miny, maxy, num=round(num_pointsy))
     # points = [Point(x, y) for x in xrange for y in yrange if polygon.contains(Point(x, y))]
@@ -204,9 +204,9 @@ def create_points_in_polygon(polygon, spacing, altitude):
                 count += 1
         if count > 0:
             length_cols.append(count)
-    print(length_cols)
-    print(f'Number of points: {len(points)}')
-    print(f'Maximum number of points: {round(num_pointsx)*round(num_pointsy)}')
+    # print(length_cols)
+    # print(f'Number of points: {len(points)}')
+    # print(f'Maximum number of points: {round(num_pointsx)*round(num_pointsy)}')
 
     return points, length_cols
 
