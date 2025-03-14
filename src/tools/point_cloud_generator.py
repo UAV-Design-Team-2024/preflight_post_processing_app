@@ -245,7 +245,7 @@ def create_points_on_boundary(polygon, spacing, altitude):
     return final_points, length_col
 
 
-def make_points(filepath, height, spacing, num_sections):
+def make_points(filepath, height, spacing, num_sections, plot_sections):
     kml_file = gp.read_file(f'{filepath}', layer='QGroundControl Plan KML')
 
     altitude = np.array(kml_file['geometry'][0].coords)[0][2] + height # meters
@@ -265,12 +265,14 @@ def make_points(filepath, height, spacing, num_sections):
         # point_list.append(points)
         # point_list.append(points_boundary)
         length_cols.append(total_cols)
-        shapely.plotting.plot_polygon(boundary_polygon)
-        shapely.plotting.plot_points(total_points)
+        if plot_sections:
+            shapely.plotting.plot_polygon(boundary_polygon)
+            shapely.plotting.plot_points(total_points)
         # shapely.plotting.plot_points(points_boundary)
     # print(point_list[0])
     # shapely.plotting.plot_polygon(base_polygon)
-    mpl.show()
+    if plot_sections:
+        mpl.show()
 
     return boundary_polygons, point_list, altitude, length_cols
 

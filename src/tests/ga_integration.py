@@ -182,7 +182,7 @@ def run_genetic_algorithm(section_number, distance_matrix, points, boundary_poly
                                                                                    generations, dM,
                                                                                    best_criteria_num, penalty_cost,
                                                                                    minimum_percent_improvement, section_number)
-    print(f"Final route was: {final_route}, with a distance of: {best_dist}")
+    # print(f"Final route was: {final_route}, with a distance of: {best_dist}")
     if plot:
         make_final_plot(points, boundary_polygon, final_route)
 def main():
@@ -205,8 +205,9 @@ def main():
     minimum_percent_improvement = 2 # in percent
     penalty_cost = float('inf')
 
-    plot = True
-    boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections)
+    plot_sections = False
+    plot_solutions = True
+    boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
 
     distance_matrices = []
     # for i in range(num_sections):
@@ -245,7 +246,7 @@ def main():
         sol = pool.starmap(run_genetic_algorithm, [(i, distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i],  pop_size,
                           generations, dM,
                           best_criteria_num, penalty_cost, minimum_percent_improvement,
-                          plot) for i in range(num_sections)])
+                          plot_solutions) for i in range(num_sections)])
 
 
 
