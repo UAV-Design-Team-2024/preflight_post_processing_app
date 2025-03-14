@@ -23,7 +23,7 @@ import math
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 import sys
-sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
+# sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
 from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
 
 # [END import]
@@ -177,12 +177,12 @@ def main():
     # Instantiate the data problem.
     # [START data]
 
-    # kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
-    kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
+    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
+    # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
-    spacing = 10  # meters
+    spacing = 50  # meters
     num_processes = 5
-    num_sections = 5
+    num_sections = 1
     use_initial_solution = True
     boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections)
 

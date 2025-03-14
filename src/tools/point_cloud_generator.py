@@ -1,5 +1,6 @@
 import os
 import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
 import geopandas as gp
 import matplotlib.pyplot as mpl
 import numpy as np
@@ -11,7 +12,6 @@ from shapely.ops import split
 from shapely.geometry import Polygon, Point, LineString, box
 import shapely.ops as s_ops
 from shapely.ops import unary_union
-from cuopt_thin_client import CuOptServiceClient
 
 
 def latlon_to_ecef(lat_deg, lon_deg, alt_m):
@@ -94,16 +94,15 @@ def is_valid_edge_for_points(p1, p2, boundary):
 #     return split_polygons
 
 
-def get_distance_row(x, y, z, row_index, points, boundary_edges):
+def get_distance_row(args):
+    x, y, z, row_index, points, boundary_edges = args
     distances = []
     for i in range(row_index +1, len(x)):
         if is_valid_edge(points[row_index], points[i], boundary_edges):
             base_distance = np.sqrt((x[i] - x[row_index]) ** 2 + (y[i] - y[row_index]) ** 2 + (z[i] - z[row_index]) ** 2)
             distances.append(base_distance)
         else:
-            distances.append(1e6)
-    # distances_no_costs = [x for x in distances if x != 1e6]
-    # print(max(distances_no_costs))
+            distances.append(np.inf)
     distances = np.array(distances)
     row = np.concatenate((np.zeros(row_index + 1), distances))
     return row
@@ -121,17 +120,15 @@ def get_distance_matrix(points, alt, num_processes, boundary_polygon):
     boundary_coords = list(boundary_polygon.exterior.coords)
     boundary_edges = [LineString([boundary_coords[i], boundary_coords[i + 1]]) for i in range(len(boundary_coords) - 1)]
 
-    # Use multiprocessing for speed
-    with multiprocessing.Pool(processes=num_processes) as pool:
-        rows = pool.starmap(
-            get_distance_row,
-            [(x, y, z, i, points, boundary_edges) for i in range(num_rows)]
-        )
+    with ProcessPoolExecutor(max_workers=num_processes) as executor:
+        rows = executor.map(get_distance_row,
+            [(x, y, z, i, points, boundary_edges) for i in range(num_rows)])
 
+    rows = list(rows)
+    # rows = [item for sublist in rows for item in sublist]
     # Make the matrix symmetric
     distance_matrix = np.array(rows)
     distance_matrix = (distance_matrix + distance_matrix.T).tolist()
-
     return distance_matrix
 
 def get_distance_matrix_nonparallel(points, alt, num_processes, boundary_polygon):
