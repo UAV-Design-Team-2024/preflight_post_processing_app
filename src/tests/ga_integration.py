@@ -130,7 +130,7 @@ def make_population(nodes ,pop_size, G, penalty_cost):
 def genetic_algorithm_base(G, initial_solution, pop_size, generations, dM, best_criteria_num, penalty_cost,
                            minimum_percent_improvement, section_number):
     best_distances_per_generation = []
-    nodes, edges = G.nodes, G.edges
+    nodes, edges = list(G.nodes), list(G.edges)
     if fitness(initial_solution, G, penalty_cost) < float("inf"):
         population = [initial_solution] + [random.sample(nodes, len(nodes)) for _ in range(pop_size - 1)]
     else:

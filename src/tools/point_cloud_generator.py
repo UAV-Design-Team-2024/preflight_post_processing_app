@@ -9,7 +9,7 @@ import json
 
 import shapely.plotting
 from shapely.ops import split
-from shapely.geometry import Polygon, Point, LineString, box
+from shapely.geometry import Polygon, Point, LineString, box, MultiLineString
 import shapely.ops as s_ops
 from shapely.ops import unary_union
 
@@ -172,6 +172,40 @@ def divide_boundary_polygon(boundary_polygon, cols):
     # shapely.plotting.plot_polygon(grid_cells[0])
     return split_polygons
 
+def perform_boundary_check(polygon, column_points):
+    omitted_points = []
+
+    boundary_check = LineString([column_points[0], column_points[-1]])
+    intersection_pts = polygon.intersection(boundary_check)
+
+    if isinstance(intersection_pts, MultiLineString):
+        section_lines = []
+        for line in intersection_pts.geoms:
+            section_lines.append(line)
+        num_omitted_sections = len(section_lines)
+        tmp_lists = [[] for _ in range(num_omitted_sections)]
+        for i in range(num_omitted_sections):
+            if i == 0:
+                for point in column_points:
+                    if point.y < section_lines[i].coords[1][1]:
+                        tmp_lists[i].append(point)
+            else:
+                for point in column_points:
+                    if (point.y < section_lines[i].coords[1][1]) and (point.y > section_lines[i-1].coords[1][1]):
+                        tmp_lists[i].append(point)
+            # print(tmp_lists)
+
+        len_tmp_lists = [len(tmp_lists[i]) for i in range(len(tmp_lists))]
+        # print(len_tmp_lists)
+
+        ind = np.argmax(np.array(len_tmp_lists))
+        # print(ind)
+
+        tmp_lists.pop(ind)
+        omitted_points = tmp_lists
+        # print(omitted_points)
+
+    return omitted_points
 def create_points_in_polygon(polygon, spacing, altitude):
 
 
@@ -195,20 +229,29 @@ def create_points_in_polygon(polygon, spacing, altitude):
     yrange = np.linspace(miny, maxy, num=round(num_pointsy))
     # points = [Point(x, y) for x in xrange for y in yrange if polygon.contains(Point(x, y))]
     points = []
+    column_points = []
     length_cols = []
+    total_omitted_points = []
+
     for x in xrange:
         count = 0
         for y in yrange:
             if polygon.contains(Point(x, y)):
                 points.append(Point(x, y))
+                column_points.append(Point(x, y))
                 count += 1
         if count > 0:
-            length_cols.append(count)
+            length_cols.append(count) #Captures the end point of the column we're currently in
+
+        if column_points != []:
+            omitted_points = perform_boundary_check(polygon, column_points)
+            total_omitted_points.append(omitted_points)
+        column_points = []
     # print(length_cols)
     # print(f'Number of points: {len(points)}')
     # print(f'Maximum number of points: {round(num_pointsx)*round(num_pointsy)}')
 
-    return points, length_cols
+    return points, length_cols, total_omitted_points
 
 def create_points_on_boundary(polygon, spacing, altitude):
     boundary = polygon.boundary
@@ -244,7 +287,6 @@ def create_points_on_boundary(polygon, spacing, altitude):
 
     return final_points, length_col
 
-
 def make_points(filepath, height, spacing, num_sections, plot_sections):
     kml_file = gp.read_file(f'{filepath}', layer='QGroundControl Plan KML')
 
@@ -253,11 +295,15 @@ def make_points(filepath, height, spacing, num_sections, plot_sections):
     boundary_polygons = divide_boundary_polygon(base_polygon, num_sections)
     # boundary_polygons = generate_valid_splits(base_polygon, 3)
 
+    i = 1
     point_list = []
     length_cols = []
+    omitted_point_list = []
     for boundary_polygon in boundary_polygons:
     # for i in range(len(boundary_polygons)):
-        points, len_col= create_points_in_polygon(boundary_polygon, spacing, altitude)
+        print(f"Making polygon points for section {i}")
+        points, len_col, omitted_points = create_points_in_polygon(boundary_polygon, spacing, altitude)
+        print(f"Omitted points: {omitted_points}")
         points_boundary, len_col_boundary = create_points_on_boundary(boundary_polygon, spacing, altitude)
         total_points = points + points_boundary
         total_cols = len_col + len_col_boundary
@@ -265,12 +311,17 @@ def make_points(filepath, height, spacing, num_sections, plot_sections):
         # point_list.append(points)
         # point_list.append(points_boundary)
         length_cols.append(total_cols)
+        omitted_point_list.append(omitted_points)
         if plot_sections:
             shapely.plotting.plot_polygon(boundary_polygon)
             shapely.plotting.plot_points(total_points)
+        i +=1
         # shapely.plotting.plot_points(points_boundary)
     # print(point_list[0])
     # shapely.plotting.plot_polygon(base_polygon)
+
+
+
     if plot_sections:
         mpl.show()
 
