@@ -247,8 +247,6 @@ class PointFactory():
         # boundary_polygons = generate_valid_splits(base_polygon, 3)
 
         i = 1
-        point_list = []
-        length_cols = []
         omitted_point_list = []
         for boundary_polygon in boundary_polygons:
             # for i in range(len(boundary_polygons)):
@@ -257,12 +255,8 @@ class PointFactory():
                                                                                          altitude)
             print(f"Omitted points: {omitted_points}")
             # points_boundary, len_col_boundary = create_points_on_boundary(boundary_polygon, spacing, altitude)
-            total_points = points  # + points_boundary
-            total_cols = len_col  # + len_col_boundary
-            self.point_list.append(total_points)
-            # point_list.append(points)
-            # point_list.append(points_boundary)
-            self.length_cols.append(total_cols)
+            self.point_list.append(points) # + points_boundary
+            self.length_cols.append(len_col)# + len_col_boundary
             omitted_point_list.append(omitted_points)
             if plot_sections:
                 self.plotter.shapely.plotting.plot_polygon(boundary_polygon)
