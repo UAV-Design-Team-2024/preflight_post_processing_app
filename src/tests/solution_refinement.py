@@ -63,28 +63,28 @@ def main():
     plot_solutions = False
     boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
 
-    distance_matrices = []
-
-    with ProcessPoolExecutor(max_workers=num_processes) as executor:
-        tik = time.perf_counter()
-
-        result = list(executor.map(create_distance_matrices, [(i, point_lists[i], altitude, num_processes,
-                                                            boundary_polygons[i]) for i in range(num_sections)]))
-        tok = time.perf_counter()
-        prep_time = tok - tik
-
-        for distance_matrix in result:
-            distance_matrices.append(distance_matrix)
-
-
-        # print(list(time_and_dist_matr))
-
-    print(f"# of distance matrices: {len(distance_matrices)}")
-    print(f"Times for pre-processing: {prep_time}")
+    # distance_matrices = []
+    #
+    # with ProcessPoolExecutor(max_workers=num_processes) as executor:
+    #     tik = time.perf_counter()
+    #
+    #     result = list(executor.map(create_distance_matrices, [(i, point_lists[i], altitude, num_processes,
+    #                                                         boundary_polygons[i]) for i in range(num_sections)]))
+    #     tok = time.perf_counter()
+    #     prep_time = tok - tik
+    #
+    #     for distance_matrix in result:
+    #         distance_matrices.append(distance_matrix)
+    #
+    #
+    #     # print(list(time_and_dist_matr))
+    #
+    # print(f"# of distance matrices: {len(distance_matrices)}")
+    # print(f"Times for pre-processing: {prep_time}")
 
     # multiprocess loop for each distance matrix in distance matrices
-    for i in range(num_sections):
-        route_refinement(i, distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], plot_initial_solutions)
+    # for i in range(num_sections):
+    #     route_refinement(i, distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], plot_initial_solutions)
 if __name__ == "__main__":
     multiprocessing.set_start_method("spawn")
     main()

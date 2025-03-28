@@ -161,6 +161,8 @@ def get_distance_matrix_nonparallel(points, alt, num_processes, boundary_polygon
 def check_symmetric(a, rtol=1e-05, atol=1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)
 
+def flatten(xss):
+    return [x for xs in xss for x in xs]
 def divide_boundary_polygon(boundary_polygon, cols):
     minx, miny, maxx, maxy = boundary_polygon.bounds
     width = (maxx - minx) / cols
@@ -175,24 +177,26 @@ def divide_boundary_polygon(boundary_polygon, cols):
 def perform_boundary_check(polygon, column_points):
     omitted_points = []
 
-    boundary_check = LineString([column_points[0], column_points[-1]])
-    intersection_pts = polygon.intersection(boundary_check)
+    boundary_check = LineString([column_points[0], column_points[-1]]) # Draws a line from the beginning of the column to the end
+    intersection_pts = polygon.intersection(boundary_check) # Gets the points of the intersections
 
-    if isinstance(intersection_pts, MultiLineString):
+    if isinstance(intersection_pts, MultiLineString): # Check to see if we have more than two boundary intersectionts
         section_lines = []
         for line in intersection_pts.geoms:
             section_lines.append(line)
         num_omitted_sections = len(section_lines)
         tmp_lists = [[] for _ in range(num_omitted_sections)]
         for i in range(num_omitted_sections):
-            if i == 0:
+            if i == 0: # First point
                 for point in column_points:
                     if point.y < section_lines[i].coords[1][1]:
                         tmp_lists[i].append(point)
-            else:
+                        column_points.remove(point)
+            else: # Subsequent points
                 for point in column_points:
                     if (point.y < section_lines[i].coords[1][1]) and (point.y > section_lines[i-1].coords[1][1]):
                         tmp_lists[i].append(point)
+                        column_points.remove(point)
             # print(tmp_lists)
 
         len_tmp_lists = [len(tmp_lists[i]) for i in range(len(tmp_lists))]
@@ -205,7 +209,7 @@ def perform_boundary_check(polygon, column_points):
         omitted_points = tmp_lists
         # print(omitted_points)
 
-    return omitted_points
+    return omitted_points, column_points
 def create_points_in_polygon(polygon, spacing, altitude):
 
 
@@ -237,20 +241,25 @@ def create_points_in_polygon(polygon, spacing, altitude):
         count = 0
         for y in yrange:
             if polygon.contains(Point(x, y)):
-                points.append(Point(x, y))
+                # points.append(Point(x, y))
                 column_points.append(Point(x, y))
                 count += 1
         if count > 0:
             length_cols.append(count) #Captures the end point of the column we're currently in
 
         if column_points != []:
-            omitted_points = perform_boundary_check(polygon, column_points)
+            omitted_points, modified_column_points = perform_boundary_check(polygon, column_points)
             total_omitted_points.append(omitted_points)
+            for point in modified_column_points:
+                points.append(point)
         column_points = []
+
     # print(length_cols)
     # print(f'Number of points: {len(points)}')
     # print(f'Maximum number of points: {round(num_pointsx)*round(num_pointsy)}')
 
+    total_omitted_points = [list for list in total_omitted_points if list]
+    total_omitted_points = flatten(flatten(total_omitted_points))
     return points, length_cols, total_omitted_points
 
 def create_points_on_boundary(polygon, spacing, altitude):
@@ -314,7 +323,8 @@ def make_points(filepath, height, spacing, num_sections, plot_sections):
         omitted_point_list.append(omitted_points)
         if plot_sections:
             shapely.plotting.plot_polygon(boundary_polygon)
-            shapely.plotting.plot_points(total_points)
+            # shapely.plotting.plot_points(total_points)
+            shapely.plotting.plot_points(omitted_points)
         i +=1
         # shapely.plotting.plot_points(points_boundary)
     # print(point_list[0])
