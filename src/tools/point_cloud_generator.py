@@ -174,13 +174,17 @@ def divide_boundary_polygon(boundary_polygon, cols):
     # shapely.plotting.plot_polygon(grid_cells[0])
     return split_polygons
 
-def perform_boundary_check(polygon, column_points):
+def perform_boundary_check(polygon, column_points, previous_inds):
     omitted_points = []
+    if not previous_inds:
+        ind_list = []
+    else:
+        ind_list = previous_inds
 
     boundary_check = LineString([column_points[0], column_points[-1]]) # Draws a line from the beginning of the column to the end
     intersection_pts = polygon.intersection(boundary_check) # Gets the points of the intersections
 
-    if isinstance(intersection_pts, MultiLineString): # Check to see if we have more than two boundary intersectionts
+    if isinstance(intersection_pts, MultiLineString): # Check to see if we have more than two boundary intersections
         section_lines = []
         for line in intersection_pts.geoms:
             section_lines.append(line)
@@ -200,16 +204,23 @@ def perform_boundary_check(polygon, column_points):
             # print(tmp_lists)
 
         len_tmp_lists = [len(tmp_lists[i]) for i in range(len(tmp_lists))]
-        # print(len_tmp_lists)
 
-        ind = np.argmax(np.array(len_tmp_lists))
-        # print(ind)
+        for length in len_tmp_lists:
+            count = len_tmp_lists.count(length)
+            if count > 1:
+                ind = ind_list[-1]
+                break
+            else:
+                ind = np.argmax(np.array(len_tmp_lists))
 
+        ind_list.append(ind)
         tmp_lists.pop(ind)
+
         omitted_points = tmp_lists
         # print(omitted_points)
 
-    return omitted_points, column_points
+
+    return omitted_points, column_points, ind_list
 def create_points_in_polygon(polygon, spacing, altitude):
 
 
@@ -232,10 +243,12 @@ def create_points_in_polygon(polygon, spacing, altitude):
     xrange = np.linspace(minx, maxx, num=round(num_pointsx))
     yrange = np.linspace(miny, maxy, num=round(num_pointsy))
     # points = [Point(x, y) for x in xrange for y in yrange if polygon.contains(Point(x, y))]
+    previous_inds = None
     points = []
     column_points = []
     length_cols = []
     total_omitted_points = []
+
 
     for x in xrange:
         count = 0
@@ -248,10 +261,11 @@ def create_points_in_polygon(polygon, spacing, altitude):
             length_cols.append(count) #Captures the end point of the column we're currently in
 
         if column_points != []:
-            omitted_points, modified_column_points = perform_boundary_check(polygon, column_points)
+            omitted_points, modified_column_points, new_previous_inds = perform_boundary_check(polygon, column_points, previous_inds)
             total_omitted_points.append(omitted_points)
             for point in modified_column_points:
                 points.append(point)
+            previous_inds = new_previous_inds
         column_points = []
 
     # print(length_cols)
@@ -259,7 +273,7 @@ def create_points_in_polygon(polygon, spacing, altitude):
     # print(f'Maximum number of points: {round(num_pointsx)*round(num_pointsy)}')
 
     total_omitted_points = [list for list in total_omitted_points if list]
-    total_omitted_points = flatten(flatten(total_omitted_points))
+    total_omitted_points = (flatten(total_omitted_points))
     return points, length_cols, total_omitted_points
 
 def create_points_on_boundary(polygon, spacing, altitude):
@@ -313,18 +327,19 @@ def make_points(filepath, height, spacing, num_sections, plot_sections):
         print(f"Making polygon points for section {i}")
         points, len_col, omitted_points = create_points_in_polygon(boundary_polygon, spacing, altitude)
         print(f"Omitted points: {omitted_points}")
-        points_boundary, len_col_boundary = create_points_on_boundary(boundary_polygon, spacing, altitude)
-        total_points = points + points_boundary
-        total_cols = len_col + len_col_boundary
+        # points_boundary, len_col_boundary = create_points_on_boundary(boundary_polygon, spacing, altitude)
+        total_points = points #+ points_boundary
+        total_cols = len_col #+ len_col_boundary
         point_list.append(total_points)
         # point_list.append(points)
         # point_list.append(points_boundary)
         length_cols.append(total_cols)
         omitted_point_list.append(omitted_points)
+        # omitted_point_list.append([Point(-83.453, 39.157), Point(-83.453, 39.463), Point(-83.453, 39.)])
         if plot_sections:
             shapely.plotting.plot_polygon(boundary_polygon)
             # shapely.plotting.plot_points(total_points)
-            shapely.plotting.plot_points(omitted_points)
+            shapely.plotting.plot_points(omitted_point_list)
         i +=1
         # shapely.plotting.plot_points(points_boundary)
     # print(point_list[0])

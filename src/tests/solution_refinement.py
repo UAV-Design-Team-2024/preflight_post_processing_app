@@ -43,10 +43,10 @@ def main():
     # Instantiate the data problem.
     # [START data]
 
-    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
+    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_2.kml'
     # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
-    spacing = 20 # meters
+    spacing = 5 # meters
     num_processes = 5
     num_sections = 5
 
