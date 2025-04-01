@@ -23,8 +23,11 @@ import math
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 import sys
-# sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
-from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
+sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
+# from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
+from src.tools.field_processing import PointFactory
+from src.tools.field_processing import DistanceFactory
+from src.tools.field_processing import PlottingFactory
 
 # [END import]
 
@@ -167,7 +170,8 @@ def run_solver(distance_matrix, points, boundary_polygon, length_col, use_initia
     if solution:
         print(f"Solution found! Printing...")
         path_seq = return_solution(data, manager, routing, solution)
-        make_final_plot(points, boundary_polygon, path_seq)
+        plotFact = PlottingFactory()
+        plotFact.make_final_plot(points, boundary_polygon, path_seq)
     else:
         print("No solution found...")
     # [END return_solution]
@@ -176,21 +180,23 @@ def main():
     """Entry point of the program."""
     # Instantiate the data problem.
     # [START data]
-
-    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
-    # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
+    # kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
+    kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
     spacing = 50  # meters
     num_processes = 5
     num_sections = 1
     use_initial_solution = True
-    boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections)
+    pointFact = PointFactory(kml_filepath=kml_filepath, spacing=spacing, height=height, num_sections=num_sections)
+    distFact = DistanceFactory()
+
+    boundary_polygons, point_lists, altitude, length_cols = pointFact.make_points()
 
     distance_matrices = []
     time_list = []
     for i in range(num_sections):
         tik = time.perf_counter()
-        distance_matrix = get_distance_matrix(point_lists[i], altitude, num_processes, boundary_polygons[i])
+        distance_matrix = distFact.get_distance_matrix(point_lists[i], altitude, num_processes, boundary_polygons[i])
         distance_matrices.append(distance_matrix)
         tok = time.perf_counter()
         time_list.append(tok-tik)
