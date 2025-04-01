@@ -49,6 +49,7 @@ class PointFactory():
 
         self.spacing: float = spacing
         self.height: float = height
+        self.altitude = np.array(self.kml_file['geometry'][0].coords)[0][2] + self.height
 
         self.path_direction: int = 0 # Vertical
         self.num_sections: int = num_sections
@@ -231,13 +232,12 @@ class PointFactory():
 
     def make_points(self):
 
-        altitude = np.array(self.kml_file['geometry'][0].coords)[0][2] + self.height  # meters
         self.boundary_polygons = self.divide_boundary_polygon(self.base_boundary_polygon, self.num_sections)
 
         i = 1
         for boundary_polygon in self.boundary_polygons:
             print(f"Making polygon points for section {i}")
-            points, len_col = self.create_points_in_polygon(boundary_polygon, self.spacing, altitude)
+            points, len_col = self.create_points_in_polygon(boundary_polygon, self.spacing, self.altitude)
             # points_boundary, len_col_boundary = create_points_on_boundary(boundary_polygon, spacing, altitude)
             self.point_list.append(points) # + points_boundary
             self.length_cols.append(len_col)# + len_col_boundary
