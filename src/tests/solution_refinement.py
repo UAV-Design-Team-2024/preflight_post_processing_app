@@ -65,11 +65,12 @@ def main():
 
     point_generator = PointFactory(kml_filepath=kml_filepath, spacing=spacing, height=height, num_sections=num_sections)
     point_generator.make_points()
+    point_generator.plot_points(show_usable=False, show_omitted=True)
 
 
 
 
-    boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
+    # boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
 
     # distance_matrices = []
     #

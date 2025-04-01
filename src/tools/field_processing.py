@@ -9,7 +9,7 @@ import json
 
 import shapely.plotting
 from shapely.ops import split
-from shapely.geometry import Polygon, Point, LineString, box, MultiLineString
+from shapely.geometry import Polygon, Point, LineString, box, MultiLineString, MultiPolygon
 import shapely.ops as s_ops
 from shapely.ops import unary_union
 
@@ -52,6 +52,8 @@ class PointFactory():
 
         self.path_direction: int = 0 # Vertical
         self.num_sections: int = num_sections
+        self.previous_omitted_sections: int = 0
+        self.current_omitted_sections: int = 0
 
         self.base_boundary_polygon: Polygon = self.kml_file["geometry"][1]
 
@@ -82,18 +84,10 @@ class PointFactory():
         # shapely.plotting.plot_polygon(grid_cells[0])
         return split_polygons
 
-    def perform_boundary_check(self, polygon, column_points, previous_inds, previous_sections):
+    def perform_boundary_check(self, polygon, column_points):
         # print("New column")
         omitted_points = []
-        if not previous_inds:
-            ind_list = []
-        else:
-            ind_list = previous_inds
-
-        if not previous_sections:
-            sections = {}
-        else:
-            sections = previous_sections
+        ind_list = self.ind_list
 
         boundary_check = LineString(
             [column_points[0], column_points[-1]])  # Draws a line from the beginning of the column to the end
@@ -104,20 +98,13 @@ class PointFactory():
             section_lines = []
             for line in intersection_pts.geoms:
                 section_lines.append(line)
-            num_omitted_sections = len(section_lines)
+            self.current_omitted_sections = len(section_lines)
             # print(num_omitted_sections)
-            tmp_lists = [[] for _ in range(num_omitted_sections)]
-            for i in range(num_omitted_sections):
-                if i == 0:  # First point
-                    for point in column_points:
-                        if point.y < section_lines[i].coords[1][1]:
-                            tmp_lists[i].append(point)
-                            column_points.remove(point)
-                else:  # Subsequent points
-                    for point in column_points:
-                        if (point.y < section_lines[i].coords[1][1]) and (point.y > section_lines[i].coords[0][1]):
-                            tmp_lists[i].append(point)
-                            column_points.remove(point)
+            tmp_lists = [[] for _ in range(self.current_omitted_sections)]
+            for point in column_points:
+                for i in range(self.current_omitted_sections):
+                    if (point.y <= section_lines[i].coords[1][1]) and (point.y > section_lines[i].coords[0][1]):
+                        tmp_lists[i].append(point)
 
                 # print(sections)
                 # print(tmp_lists)
@@ -126,6 +113,7 @@ class PointFactory():
             print(len_tmp_lists)
             for length in len_tmp_lists:
                 count = len_tmp_lists.count(length)
+                print(f"Length: {length}| Count: {count} | IndList: {ind_list}")
                 if count > 1:
                     ind = ind_list[-1]
                     break
@@ -136,18 +124,22 @@ class PointFactory():
             tmp_lists.pop(ind)
 
             for i in range(len(tmp_lists)):
-                if not sections.get(i):
+
+                if not self.subsections.get(i):
                     # print("False")
-                    sections[i] = tmp_lists[i]
+                    self.subsections[i] = tmp_lists[i]
                 else:
                     # print("True")
                     for val in tmp_lists[i]:
-                        sections[i].append(val)
+                        self.subsections[i].append(val)
+
 
             omitted_points = tmp_lists
             # print(omitted_points)
 
-        return omitted_points, column_points, ind_list, sections
+            self.ind_list = ind_list
+            self.previous_omitted_sections = self.current_omitted_sections
+        return omitted_points, column_points
 
     def create_points_in_polygon(self, polygon, spacing, altitude):
 
@@ -169,13 +161,10 @@ class PointFactory():
         # print('Number of Columns:', round(num_pointsy))
         xrange = np.linspace(minx, maxx, num=round(num_pointsx))
         yrange = np.linspace(miny, maxy, num=round(num_pointsy))
-        # points = [Point(x, y) for x in xrange for y in yrange if polygon.contains(Point(x, y))]
-        previous_inds = None
-        previous_sections = None
+
         points = []
         column_points = []
         length_cols = []
-        total_omitted_points = []
 
         for x in xrange:
             count = 0
@@ -188,23 +177,22 @@ class PointFactory():
                 length_cols.append(count)  # Captures the end point of the column we're currently in
 
             if column_points != []:
-                omitted_points, modified_column_points, new_previous_inds, new_sections = self.perform_boundary_check(
-                    polygon, column_points, previous_inds, previous_sections)
-                total_omitted_points.append(omitted_points)
+                omitted_points, modified_column_points = self.perform_boundary_check(
+                    polygon, column_points)
+                self.omitted_points.append(omitted_points)
                 for point in modified_column_points:
                     points.append(point)
-                previous_inds = new_previous_inds
-                previous_sections = new_sections
+
             column_points = []
 
-        print(new_sections)
+        # print(new_sections)
         # print(length_cols)
         # print(f'Number of points: {len(points)}')
         # print(f'Maximum number of points: {round(num_pointsx)*round(num_pointsy)}')
 
         # total_omitted_points = [list for list in total_omitted_points if list]
         # total_omitted_points = (flatten(total_omitted_points))
-        return points, length_cols, omitted_points, new_sections
+        return points, length_cols
 
     def create_points_on_boundary(self, polygon, spacing, altitude):
         boundary = polygon.boundary
@@ -244,31 +232,27 @@ class PointFactory():
     def make_points(self):
 
         altitude = np.array(self.kml_file['geometry'][0].coords)[0][2] + self.height  # meters
-        boundary_polygons = self.divide_boundary_polygon(self.base_boundary_polygon, self.num_sections)
-        # boundary_polygons = generate_valid_splits(base_polygon, 3)
+        self.boundary_polygons = self.divide_boundary_polygon(self.base_boundary_polygon, self.num_sections)
 
         i = 1
-        omitted_point_list = []
-        for boundary_polygon in boundary_polygons:
-            # for i in range(len(boundary_polygons)):
+        for boundary_polygon in self.boundary_polygons:
             print(f"Making polygon points for section {i}")
-            points, len_col, omitted_points, omitted_sections = self.create_points_in_polygon(boundary_polygon, self.spacing,
-                                                                                         altitude)
-            print(f"Omitted points: {omitted_points}")
+            points, len_col = self.create_points_in_polygon(boundary_polygon, self.spacing, altitude)
             # points_boundary, len_col_boundary = create_points_on_boundary(boundary_polygon, spacing, altitude)
             self.point_list.append(points) # + points_boundary
             self.length_cols.append(len_col)# + len_col_boundary
-            omitted_point_list.append(omitted_points)
-            if self.plot_sections:
-                self.plotter.add_object_to_plot(boundary_polygon)
-                # shapely.plotting.plot_points(total_points)
-                for val in omitted_sections.values():
-                    self.plotter.add_object_to_plot(val)
             i += 1
-            # shapely.plotting.plot_points(points_boundary)
-        # print(point_list[0])
-        # shapely.plotting.plot_polygon(base_polygon)
 
+    def plot_points(self, show_usable=True, show_omitted=False):
+        for boundary_polygon in self.boundary_polygons:
+            self.plotter.add_object_to_plot(boundary_polygon)
+            if show_usable:
+                for val in self.point_list:
+                    self.plotter.add_object_to_plot(val)
+            if show_omitted:
+                for val in self.subsections.values():
+                    self.plotter.add_object_to_plot(val)
+        self.plotter.show_plots()
 
 class DistanceFactory():
     def __init__(self):
@@ -335,7 +319,7 @@ class PlottingFactory():
         pass
 
     def add_object_to_plot(self, object):
-        if isinstance(object, Polygon):
+        if isinstance(object, Polygon) or isinstance(object, MultiPolygon):
             shapely.plotting.plot_polygon(object)
 
         if isinstance(object, list):
@@ -372,4 +356,3 @@ class PlottingFactory():
 
     def show_plots(self):
         mpl.show()
-        mpl.clf()
