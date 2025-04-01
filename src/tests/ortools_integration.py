@@ -190,13 +190,19 @@ def main():
     pointFact = PointFactory(kml_filepath=kml_filepath, spacing=spacing, height=height, num_sections=num_sections)
     distFact = DistanceFactory()
 
-    boundary_polygons, point_lists, altitude, length_cols = pointFact.make_points()
+    pointFact.make_points()
+    boundary_polygons = pointFact.boundary_polygons
+    point_lists = pointFact.point_list
+    altitude = pointFact.altitude
+    length_cols = pointFact.length_cols
+    # boundary_polygons, point_lists, altitude, length_cols = pointFact.make_points()
 
     distance_matrices = []
     time_list = []
     for i in range(num_sections):
         tik = time.perf_counter()
-        distance_matrix = distFact.get_distance_matrix(point_lists[i], altitude, num_processes, boundary_polygons[i])
+        distFact.get_distance_matrix(point_lists[i], altitude, num_processes, boundary_polygons[i])
+        distance_matrix = distFact.distance_matrix
         distance_matrices.append(distance_matrix)
         tok = time.perf_counter()
         time_list.append(tok-tik)
