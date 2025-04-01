@@ -43,14 +43,15 @@ def get_coord_matrix(points, alt):
     return coords
 
 class PointFactory():
-    def __init__(self, kml_filepath, spacing, height):
-        self.kml_file: str = kml_filepath
+    def __init__(self, kml_filepath, spacing, height, num_sections):
+        self.kml_filepath: str = kml_filepath
+        self.kml_file = gp.read_file(f'{self.kml_filepath}', layer='QGroundControl Plan KML')
 
         self.spacing: float = spacing
         self.height: float = height
 
         self.path_direction: int = 0 # Vertical
-        self.num_sections: int = 0
+        self.num_sections: int = num_sections
 
         self.base_boundary_polygon: Polygon = self.kml_file["geometry"][1]
 
@@ -63,6 +64,8 @@ class PointFactory():
         self.subsections: dict = {}
         self.omitted_points: list = []
         self.ind_list: list = []
+
+        self.plot_sections: bool = True
 
         self.plotter = PlottingFactory()
 
@@ -238,12 +241,10 @@ class PointFactory():
 
         return final_points, length_col
 
-    def make_points(self, filepath, height, spacing, num_sections, plot_sections):
-        kml_file = gp.read_file(f'{filepath}', layer='QGroundControl Plan KML')
+    def make_points(self):
 
-        altitude = np.array(kml_file['geometry'][0].coords)[0][2] + height  # meters
-        base_polygon = kml_file["geometry"][1]
-        boundary_polygons = self.divide_boundary_polygon(base_polygon, num_sections)
+        altitude = np.array(self.kml_file['geometry'][0].coords)[0][2] + self.height  # meters
+        boundary_polygons = self.divide_boundary_polygon(self.base_boundary_polygon, self.num_sections)
         # boundary_polygons = generate_valid_splits(base_polygon, 3)
 
         i = 1
@@ -251,25 +252,22 @@ class PointFactory():
         for boundary_polygon in boundary_polygons:
             # for i in range(len(boundary_polygons)):
             print(f"Making polygon points for section {i}")
-            points, len_col, omitted_points, omitted_sections = self.create_points_in_polygon(boundary_polygon, spacing,
+            points, len_col, omitted_points, omitted_sections = self.create_points_in_polygon(boundary_polygon, self.spacing,
                                                                                          altitude)
             print(f"Omitted points: {omitted_points}")
             # points_boundary, len_col_boundary = create_points_on_boundary(boundary_polygon, spacing, altitude)
             self.point_list.append(points) # + points_boundary
             self.length_cols.append(len_col)# + len_col_boundary
             omitted_point_list.append(omitted_points)
-            if plot_sections:
-                self.plotter.shapely.plotting.plot_polygon(boundary_polygon)
+            if self.plot_sections:
+                self.plotter.add_object_to_plot(boundary_polygon)
                 # shapely.plotting.plot_points(total_points)
                 for val in omitted_sections.values():
-                    shapely.plotting.plot_points(val)
+                    self.plotter.add_object_to_plot(val)
             i += 1
             # shapely.plotting.plot_points(points_boundary)
         # print(point_list[0])
         # shapely.plotting.plot_polygon(base_polygon)
-
-
-        return boundary_polygons, point_list, altitude, length_cols
 
 
 class DistanceFactory():

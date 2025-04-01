@@ -9,6 +9,7 @@ import math
 import sys
 # sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
 from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
+from src.tools.field_processing import PointFactory
 
 import networkx as nx
 import random
@@ -61,6 +62,13 @@ def main():
     plot_sections = True
     plot_initial_solutions = False
     plot_solutions = False
+
+    point_generator = PointFactory(kml_filepath=kml_filepath, spacing=spacing, height=height, num_sections=num_sections)
+    point_generator.make_points()
+
+
+
+
     boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
 
     # distance_matrices = []
