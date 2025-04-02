@@ -256,7 +256,7 @@ class PointFactory():
 
 class DistanceFactory():
     def __init__(self):
-        self.distance_matrix: list = []
+        self.distance_matrices: list = []
         pass
 
     def check_symmetric(self, a, rtol=1e-05, atol=1e-08):
@@ -311,8 +311,8 @@ class DistanceFactory():
         # Make the matrix symmetric
         distance_matrix = np.array(rows)
         distance_matrix = (distance_matrix + distance_matrix.T).tolist()
-        self.distance_matrix = distance_matrix
-        # return distance_matrix
+        self.distance_matrices.append(distance_matrix)
+        return distance_matrix
 
 
 

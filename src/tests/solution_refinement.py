@@ -9,15 +9,16 @@ import math
 import sys
 # sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
 from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
-from src.tools.field_processing import PointFactory
+from src.tools.field_processing import PointFactory, DistanceFactory
 
 import networkx as nx
 import random
 import matplotlib.pyplot as mpl
 def create_distance_matrices(args):
     i, points, altitude, num_processes, boundary_polygon = args
+    distance_matrix_generator = DistanceFactory()
     print(f"Getting distance matrix for section {i+1}")
-    distance_matrix = get_distance_matrix(points, altitude, num_processes, boundary_polygon)
+    distance_matrix = distance_matrix_generator.get_distance_matrix(points, altitude, num_processes, boundary_polygon)
     return distance_matrix
 
 def create_initial_route(distance_matrix, length_cols):
@@ -44,10 +45,10 @@ def main():
     # Instantiate the data problem.
     # [START data]
 
-    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_2.kml'
+    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
     # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
-    spacing = 5 # meters
+    spacing = 15 # meters
     num_processes = 5
     num_sections = 5
 
@@ -60,40 +61,44 @@ def main():
     penalty_cost = float('inf')
 
     plot_sections = True
-    plot_initial_solutions = False
+    plot_initial_solutions = True
     plot_solutions = False
 
     point_generator = PointFactory(kml_filepath=kml_filepath, spacing=spacing, height=height, num_sections=num_sections)
     point_generator.make_points()
     point_generator.plot_points(show_usable=False, show_omitted=True)
-    print(point_generator.point_list)
 
 
 
     # boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
 
-    # distance_matrices = []
-    #
-    # with ProcessPoolExecutor(max_workers=num_processes) as executor:
-    #     tik = time.perf_counter()
-    #
-    #     result = list(executor.map(create_distance_matrices, [(i, point_lists[i], altitude, num_processes,
-    #                                                         boundary_polygons[i]) for i in range(num_sections)]))
-    #     tok = time.perf_counter()
-    #     prep_time = tok - tik
-    #
-    #     for distance_matrix in result:
-    #         distance_matrices.append(distance_matrix)
-    #
-    #
-    #     # print(list(time_and_dist_matr))
-    #
-    # print(f"# of distance matrices: {len(distance_matrices)}")
-    # print(f"Times for pre-processing: {prep_time}")
+    point_lists = point_generator.point_list
+    altitude = point_generator.altitude
+    boundary_polygons = point_generator.boundary_polygons
+    length_cols = point_generator.length_cols
+
+    distance_matrices = []
+
+    with ProcessPoolExecutor(max_workers=num_processes) as executor:
+        tik = time.perf_counter()
+
+        result = list(executor.map(create_distance_matrices, [(i, point_lists[i], altitude, num_processes,
+                                                            boundary_polygons[i]) for i in range(num_sections)]))
+        tok = time.perf_counter()
+        prep_time = tok - tik
+
+        for distance_matrix in result:
+            distance_matrices.append(distance_matrix)
+
+
+        # print(list(time_and_dist_matr))
+
+    print(f"# of distance matrices: {len(distance_matrices)}")
+    print(f"Times for pre-processing: {prep_time}")
 
     # multiprocess loop for each distance matrix in distance matrices
-    # for i in range(num_sections):
-    #     route_refinement(i, distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], plot_initial_solutions)
+    for i in range(num_sections):
+        route_refinement(i, distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], plot_initial_solutions)
 if __name__ == "__main__":
     multiprocessing.set_start_method("spawn")
     main()
