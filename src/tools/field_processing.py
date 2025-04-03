@@ -14,6 +14,63 @@ import shapely.ops as s_ops
 from shapely.ops import unary_union
 
 
+def check_symmetric(a, rtol=1e-05, atol=1e-08):
+    return np.allclose(a, a.T, rtol=rtol, atol=atol)
+
+
+def is_valid_edge(p1, p2, boundary_edges):
+    """
+    Check if a path between two points crosses the boundary edges.
+    """
+    line = LineString([p1.coords[0], p2.coords[0]])
+
+    # Edge is valid if it does NOT intersect any boundary edge
+    for boundary_edge in boundary_edges:
+        if line.intersects(boundary_edge) and not line.touches(boundary_edge):
+            return False
+    return True
+
+
+def get_distance_row(args):
+    x, y, z, row_index, points, boundary_edges = args
+    distances = []
+    for i in range(row_index + 1, len(x)):
+        if is_valid_edge(points[row_index], points[i], boundary_edges):
+            base_distance = np.sqrt(
+                (x[i] - x[row_index]) ** 2 + (y[i] - y[row_index]) ** 2 + (z[i] - z[row_index]) ** 2)
+            distances.append(base_distance)
+        else:
+            distances.append(np.inf)
+    distances = np.array(distances)
+    row = np.concatenate((np.zeros(row_index + 1), distances))
+    return row
+
+
+def get_distance_matrix(points, alt, num_processes, boundary_polygon):
+    """Generates a matrix in parallel using multiprocessing."""
+    px = np.array([point.x for point in points])
+    py = np.array([point.y for point in points])
+    altitude = np.array([alt for _ in range(len(points))])
+
+    x, y, z = latlon_to_ecef(px, py, altitude)
+    num_rows = len(points)
+
+    # Generate boundary edges as LineString objects
+    boundary_coords = list(boundary_polygon.exterior.coords)
+    boundary_edges = [LineString([boundary_coords[i], boundary_coords[i + 1]]) for i in
+                      range(len(boundary_coords) - 1)]
+
+    with ProcessPoolExecutor(max_workers=num_processes) as executor:
+        rows = executor.map(get_distance_row,
+                            [(x, y, z, i, points, boundary_edges) for i in range(num_rows)])
+
+    rows = list(rows)
+    # rows = [item for sublist in rows for item in sublist]
+    # Make the matrix symmetric
+    distance_matrix = np.array(rows)
+    distance_matrix = (distance_matrix + distance_matrix.T).tolist()
+    return distance_matrix
+
 def latlon_to_ecef(lat_deg, lon_deg, alt_m):
     """
     Converts latitude, longitude (in degrees), and altitude (in meters) to
@@ -73,6 +130,21 @@ class PointFactory():
         self.plotter = PlottingFactory()
 
 
+
+    def remove_omitted_points_from_total(self):
+        flat_list1 = [pt for sublist in self.point_list for pt in sublist]
+        flat_list2 = [pt for sublist in self.omitted_points for pt in sublist]
+
+        # Create sets of well-known text (WKT) representations (since Points aren't hashable directly)
+        set1 = set(p.wkt for p in flat_list1)
+        set2 = set(p.wkt for p in flat_list2)
+
+        # Find common points
+        common = set1 & set2
+
+        # Filter out common points from original nested lists
+        self.point_list = [[pt for pt in sublist if pt.wkt not in common] for sublist in self.point_list]
+        self.omitted_points = [[pt for pt in sublist if pt.wkt not in common] for sublist in self.omitted_points]
     def divide_boundary_polygon(self, boundary_polygon, cols):
         minx, miny, maxx, maxy = boundary_polygon.bounds
         width = (maxx - minx) / cols
@@ -104,7 +176,7 @@ class PointFactory():
             tmp_lists = [[] for _ in range(self.current_omitted_sections)]
             for point in column_points:
                 for i in range(self.current_omitted_sections):
-                    if (point.y <= section_lines[i].coords[1][1]) and (point.y > section_lines[i].coords[0][1]):
+                    if (point.y <= section_lines[i].coords[1][1]) and (point.y >= section_lines[i].coords[0][1]):
                         tmp_lists[i].append(point)
 
                 # print(sections)
@@ -180,7 +252,8 @@ class PointFactory():
             if column_points != []:
                 omitted_points, modified_column_points = self.perform_boundary_check(
                     polygon, column_points)
-                self.omitted_points.append(omitted_points)
+                for point in omitted_points:
+                    self.omitted_points.append(point)
                 for point in modified_column_points:
                     points.append(point)
 
@@ -196,8 +269,6 @@ class PointFactory():
         return points, length_cols
 
     def create_points_on_boundary(self, polygon, spacing, altitude):
-        boundary = polygon.boundary
-
         # Find the rightmost x-coordinate
         max_x = max(x for x, y, z in polygon.exterior.coords)
         y_values = [y for x, y, z in polygon.exterior.coords if x == max_x]
@@ -232,16 +303,25 @@ class PointFactory():
 
     def make_points(self):
 
+        point_list = []
         self.boundary_polygons = self.divide_boundary_polygon(self.base_boundary_polygon, self.num_sections)
-
         i = 1
         for boundary_polygon in self.boundary_polygons:
             print(f"Making polygon points for section {i}")
             points, len_col = self.create_points_in_polygon(boundary_polygon, self.spacing, self.altitude)
             # points_boundary, len_col_boundary = create_points_on_boundary(boundary_polygon, spacing, altitude)
-            self.point_list.append(points) # + points_boundary
+            point_list.append(points) # + points_boundary
             self.length_cols.append(len_col)# + len_col_boundary
             i += 1
+        # for op_list in self.omitted_points:
+        #     for point in op_list:
+        #         print(point)
+        #         for list in point_list:
+        #             if point in list:
+        #                 list.remove(point)
+            self.point_list.append(points)
+
+        self.remove_omitted_points_from_total()
 
     def plot_points(self, show_usable=True, show_omitted=False):
         for boundary_polygon in self.boundary_polygons:
@@ -259,60 +339,7 @@ class DistanceFactory():
         self.distance_matrices: list = []
         pass
 
-    def check_symmetric(self, a, rtol=1e-05, atol=1e-08):
-        return np.allclose(a, a.T, rtol=rtol, atol=atol)
 
-    def is_valid_edge(self, p1, p2, boundary_edges):
-        """
-        Check if a path between two points crosses the boundary edges.
-        """
-        line = LineString([p1.coords[0], p2.coords[0]])
-
-        # Edge is valid if it does NOT intersect any boundary edge
-        for boundary_edge in boundary_edges:
-            if line.intersects(boundary_edge) and not line.touches(boundary_edge):
-                return False
-        return True
-
-    def get_distance_row(self, args):
-        x, y, z, row_index, points, boundary_edges = args
-        distances = []
-        for i in range(row_index + 1, len(x)):
-            if self.is_valid_edge(points[row_index], points[i], boundary_edges):
-                base_distance = np.sqrt(
-                    (x[i] - x[row_index]) ** 2 + (y[i] - y[row_index]) ** 2 + (z[i] - z[row_index]) ** 2)
-                distances.append(base_distance)
-            else:
-                distances.append(np.inf)
-        distances = np.array(distances)
-        row = np.concatenate((np.zeros(row_index + 1), distances))
-        return row
-
-    def get_distance_matrix(self, points, alt, num_processes, boundary_polygon):
-        """Generates a matrix in parallel using multiprocessing."""
-        px = np.array([point.x for point in points])
-        py = np.array([point.y for point in points])
-        altitude = np.array([alt for _ in range(len(points))])
-
-        x, y, z = latlon_to_ecef(px, py, altitude)
-        num_rows = len(points)
-
-        # Generate boundary edges as LineString objects
-        boundary_coords = list(boundary_polygon.exterior.coords)
-        boundary_edges = [LineString([boundary_coords[i], boundary_coords[i + 1]]) for i in
-                          range(len(boundary_coords) - 1)]
-
-        with ProcessPoolExecutor(max_workers=num_processes) as executor:
-            rows = executor.map(self.get_distance_row,
-                                [(x, y, z, i, points, boundary_edges) for i in range(num_rows)])
-
-        rows = list(rows)
-        # rows = [item for sublist in rows for item in sublist]
-        # Make the matrix symmetric
-        distance_matrix = np.array(rows)
-        distance_matrix = (distance_matrix + distance_matrix.T).tolist()
-        self.distance_matrices.append(distance_matrix)
-        return distance_matrix
 
 
 
