@@ -15,10 +15,9 @@ import networkx as nx
 import random
 import matplotlib.pyplot as mpl
 def create_distance_matrices(args):
-    i, points, altitude, num_processes, boundary_polygon = args
-    distance_matrix_generator = DistanceFactory()
+    i, points, altitude, num_processes, boundary_polygon, distance_factory_instance = args
     print(f"Getting distance matrix for section {i+1}")
-    distance_matrix = distance_matrix_generator.get_distance_matrix(points, altitude, num_processes, boundary_polygon)
+    distance_matrix = distance_factory_instance.get_distance_matrix(points, altitude, num_processes, boundary_polygon)
     return distance_matrix
 
 def create_initial_route(distance_matrix, length_cols):
@@ -64,6 +63,7 @@ def main():
     plot_initial_solutions = True
     plot_solutions = False
 
+    distance_matrix_generator = DistanceFactory()
     point_generator = PointFactory(kml_filepath=kml_filepath, spacing=spacing, height=height, num_sections=num_sections)
     point_generator.make_points()
     point_generator.plot_points(show_usable=False, show_omitted=True)
@@ -83,7 +83,7 @@ def main():
         tik = time.perf_counter()
 
         result = list(executor.map(create_distance_matrices, [(i, point_lists[i], altitude, num_processes,
-                                                            boundary_polygons[i]) for i in range(num_sections)]))
+                                                            boundary_polygons[i], distance_matrix_generator) for i in range(num_sections)]))
         tok = time.perf_counter()
         prep_time = tok - tik
 
