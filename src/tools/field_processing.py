@@ -110,6 +110,9 @@ class PointFactory():
 
         self.path_direction: int = 0 # Vertical
         self.num_sections: int = num_sections
+        self.current_section_number: int = 1
+        self.num_fitted_sections: int = 0
+        self.num_omitted_sections: int = 0
         self.previous_omitted_sections: int = 0
         self.current_omitted_sections: int = 0
 
@@ -118,6 +121,7 @@ class PointFactory():
         self.boundary_polygons: list = []
         self.point_list: list = []
         self.length_cols: list = []
+        self.omitted_length_cols: list = []
 
         self.ind: list = []
         self.column_points: list = []
@@ -144,7 +148,10 @@ class PointFactory():
 
         # Filter out common points from original nested lists
         self.point_list = [[pt for pt in sublist if pt.wkt not in common] for sublist in self.point_list]
-        self.omitted_points = [[pt for pt in sublist if pt.wkt not in common] for sublist in self.omitted_points]
+        # self.omitted_points = [[pt for pt in sublist if pt.wkt not in common] for sublist in self.omitted_points]
+
+        self.num_fitted_sections = len(self.point_list)
+        self.num_omitted_sections = len(self.omitted_points)
     def divide_boundary_polygon(self, boundary_polygon, cols):
         minx, miny, maxx, maxy = boundary_polygon.bounds
         width = (maxx - minx) / cols
@@ -198,13 +205,13 @@ class PointFactory():
 
             for i in range(len(tmp_lists)):
 
-                if not self.subsections.get(i):
+                if not self.subsections.get(f'S{self.current_section_number}'):
                     # print("False")
-                    self.subsections[i] = tmp_lists[i]
+                    self.subsections[f'S{self.current_section_number}'] = tmp_lists[i]
                 else:
                     # print("True")
                     for val in tmp_lists[i]:
-                        self.subsections[i].append(val)
+                        self.subsections[f'S{self.current_section_number}'].append(val)
 
 
             omitted_points = tmp_lists
@@ -214,6 +221,17 @@ class PointFactory():
             self.previous_omitted_sections = self.current_omitted_sections
         return omitted_points, column_points
 
+    def create_initial_route(self, distance_matrix, length_cols):
+        init_route = np.arange(0, len(distance_matrix), 1).tolist()
+        start = 0
+        init_routes = []
+        for size in length_cols:
+            init_routes.append(init_route[start:start + size])
+            start += size
+        for i in range(1, len(init_routes), 2):
+            init_routes[i].reverse()
+        finalized_init_route = [point for sublist in init_routes for point in sublist]
+        return finalized_init_route
     def create_points_in_polygon(self, polygon, spacing, altitude):
 
         """
@@ -238,7 +256,7 @@ class PointFactory():
         points = []
         column_points = []
         length_cols = []
-
+        omitted_len_cols = []
         for x in xrange:
             count = 0
             for y in yrange:
@@ -252,21 +270,14 @@ class PointFactory():
             if column_points != []:
                 omitted_points, modified_column_points = self.perform_boundary_check(
                     polygon, column_points)
-                for point in omitted_points:
-                    self.omitted_points.append(point)
                 for point in modified_column_points:
                     points.append(point)
-
+                omitted_col_count = len(omitted_points)
+                if omitted_col_count > 0:
+                    omitted_len_cols.append(omitted_col_count)
             column_points = []
 
-        # print(new_sections)
-        # print(length_cols)
-        # print(f'Number of points: {len(points)}')
-        # print(f'Maximum number of points: {round(num_pointsx)*round(num_pointsy)}')
-
-        # total_omitted_points = [list for list in total_omitted_points if list]
-        # total_omitted_points = (flatten(total_omitted_points))
-        return points, length_cols
+        return points, length_cols, omitted_len_cols
 
     def create_points_on_boundary(self, polygon, spacing, altitude):
         # Find the rightmost x-coordinate
@@ -305,43 +316,31 @@ class PointFactory():
 
         point_list = []
         self.boundary_polygons = self.divide_boundary_polygon(self.base_boundary_polygon, self.num_sections)
-        i = 1
         for boundary_polygon in self.boundary_polygons:
-            print(f"Making polygon points for section {i}")
-            points, len_col = self.create_points_in_polygon(boundary_polygon, self.spacing, self.altitude)
+            print(f"Making polygon points for section {self.current_section_number}")
+            points, len_col, omitted_len_col = self.create_points_in_polygon(boundary_polygon, self.spacing, self.altitude)
             # points_boundary, len_col_boundary = create_points_on_boundary(boundary_polygon, spacing, altitude)
             point_list.append(points) # + points_boundary
             self.length_cols.append(len_col)# + len_col_boundary
-            i += 1
-        # for op_list in self.omitted_points:
-        #     for point in op_list:
-        #         print(point)
-        #         for list in point_list:
-        #             if point in list:
-        #                 list.remove(point)
+            self.omitted_length_cols.append(omitted_len_col)
             self.point_list.append(points)
+            self.current_section_number += 1
+
+        for list in self.subsections.values():
+            if list != []:
+                self.omitted_points.append(list)
 
         self.remove_omitted_points_from_total()
-
     def plot_points(self, show_usable=True, show_omitted=False):
         for boundary_polygon in self.boundary_polygons:
             self.plotter.add_object_to_plot(boundary_polygon)
             if show_usable:
-                for val in self.point_list:
-                    self.plotter.add_object_to_plot(val)
+                for section in self.point_list:
+                    self.plotter.add_object_to_plot(section)
             if show_omitted:
-                for val in self.subsections.values():
-                    self.plotter.add_object_to_plot(val)
+                for section in self.omitted_points:
+                    self.plotter.add_object_to_plot(section)
         self.plotter.show_plots()
-
-class DistanceFactory():
-    def __init__(self):
-        self.distance_matrices: list = []
-        pass
-
-
-
-
 
 class PlottingFactory():
     def __init__(self):
