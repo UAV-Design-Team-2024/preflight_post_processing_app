@@ -13,6 +13,9 @@ from shapely.geometry import Polygon, Point, LineString, box, MultiLineString, M
 import shapely.ops as s_ops
 from shapely.ops import unary_union
 
+from sklearn.cluster import DBSCAN
+from scipy.spatial import distance_matrix
+
 
 def check_symmetric(a, rtol=1e-05, atol=1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)
@@ -134,7 +137,46 @@ class PointFactory():
         self.plotter = PlottingFactory()
 
 
+    def adaptive_eps(self, cluster_points, scale=1.5):
+        """
+        Estimate a good eps value for DBSCAN based on point spacing.
+        """
+        coords = np.array([[p.x, p.y] for p in cluster_points])
+        dists = distance_matrix(coords, coords)
+        # Exclude self-distances (0.0) by masking the diagonal
+        nearest_dists = np.partition(dists, 1, axis=1)[:, 1]
+        avg_spacing = np.mean(nearest_dists)
+        return avg_spacing * scale
 
+    def merge_border_points_back(self, main_cluster, candidate_points, max_dist=0.0002):
+        """
+        Merge nearby border/noise points back into the main cluster.
+        Only if they're within `max_dist` of any point in the main cluster.
+        """
+        main_coords = np.array([[p.x, p.y] for p in main_cluster])
+        new_main = list(main_cluster)
+        removed = []
+
+        for pt in candidate_points:
+            pt_coord = np.array([pt.x, pt.y])
+            dists = np.linalg.norm(main_coords - pt_coord, axis=1)
+            # print(f"Trying to see if the point {pt.x}, {pt.y} will be integrated...")
+            # print(f'Minimum of all distances from point {pt.x}, {pt.y} is {np.min(dists)} '
+            #       f'which is {"less than" if np.min(dists) < max_dist else "greater than"} {max_dist}')
+            if np.min(dists) < max_dist:
+                # print(f"Found a point: {pt.x}, {pt.y}")
+                new_main.append(pt)
+                removed.append(pt)
+            else:
+                if removed:
+                    for removed_pt in removed:
+                        dists = np.linalg.norm(np.array([removed_pt.x, removed_pt.y]) - pt_coord)
+                        if np.min(dists) < max_dist:
+                            new_main.append(pt)
+                            removed.append(pt)
+                            break
+
+        return new_main, [pt for pt in candidate_points if pt not in removed]
     def remove_omitted_points_from_total(self):
         flat_list1 = [pt for sublist in self.point_list for pt in sublist]
         flat_list2 = [pt for sublist in self.omitted_points for pt in sublist]
@@ -220,6 +262,52 @@ class PointFactory():
             self.ind_list = ind_list
             self.previous_omitted_sections = self.current_omitted_sections
         return omitted_points, column_points
+
+    def split_omitted_clusters(self, min_samples=5, scale=1.5):
+        cleaned_omitted_lists = []
+        outlier_point_lists = []
+
+        for cluster in self.omitted_points:
+            if len(cluster) <= 1:
+                outlier_point_lists.append(cluster)
+                continue
+
+            coords = np.array([[p.x, p.y] for p in cluster])
+            eps = self.adaptive_eps(cluster, scale=scale)
+
+            db = DBSCAN(eps=eps, min_samples=min_samples).fit(coords)
+            labels = db.labels_
+
+            subclusters = {}
+            for label, point in zip(labels, cluster):
+                subclusters.setdefault(label, []).append(point)
+
+            main_label = max(
+                (label for label in subclusters if label != -1),
+                key=lambda lbl: len(subclusters[lbl]),
+                default=None
+            )
+
+            if main_label is not None:
+                main_cluster = subclusters[main_label]
+                others = [pt for lbl, pts in subclusters.items() if lbl != main_label for pt in pts]
+
+                recovered, remaining_outliers = self.merge_border_points_back(main_cluster, others, max_dist=eps * 1.2)
+
+                # for pt in remaining_outliers:
+                    # print(pt.x, pt.y)
+
+                cleaned_omitted_lists.append(recovered)
+                if remaining_outliers:
+                    outlier_point_lists.append(remaining_outliers)
+
+            for label, points in subclusters.items():
+                if label != main_label:
+                    outlier_point_lists.append(points)
+
+
+        self.omitted_points = cleaned_omitted_lists
+        return cleaned_omitted_lists, outlier_point_lists
 
     def create_initial_route(self, distance_matrix, length_cols):
         init_route = np.arange(0, len(distance_matrix), 1).tolist()
