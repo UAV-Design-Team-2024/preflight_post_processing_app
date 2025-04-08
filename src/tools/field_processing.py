@@ -359,21 +359,23 @@ class PointFactory():
         length_cols = []
         omitted_len_cols = []
         for x in xrange:
-            count = 0
+            # count = 0
             for y in yrange:
                 if polygon.contains(Point(x, y)):
                     # points.append(Point(x, y))
                     column_points.append(Point(x, y))
-                    count += 1
-            if count > 0:
-                length_cols.append(count)  # Captures the end point of the column we're currently in
+                    # count += 1
+            # if count > 0:
+            #     length_cols.append(count)  # Captures the end point of the column we're currently in
 
             if column_points != []:
                 omitted_points, modified_column_points = self.perform_boundary_check(
                     polygon, column_points)
                 for point in modified_column_points:
                     points.append(point)
+                count = len(modified_column_points)
                 omitted_col_count = len(omitted_points)
+                length_cols.append(count)
                 if omitted_col_count > 0:
                     omitted_len_cols.append(omitted_col_count)
             column_points = []

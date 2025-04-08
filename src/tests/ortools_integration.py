@@ -16,6 +16,7 @@
 """Simple Vehicles Routing Problem."""
 import multiprocessing
 import time
+from concurrent.futures import ProcessPoolExecutor
 
 # [START import]
 import numpy as np
@@ -25,14 +26,17 @@ from ortools.constraint_solver import pywrapcp
 import sys
 sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
 # from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
-from src.tools.field_processing import PointFactory
-from src.tools.field_processing import DistanceFactory
-from src.tools.field_processing import PlottingFactory
+from src.tools.field_processing import PointFactory, PlottingFactory, get_distance_matrix
 
-# [END import]
+def create_distance_matrices(args):
+    i, points, altitude, num_processes, boundary_polygon = args
+    print(f"Getting distance matrix for section {i+1}")
+    tik = time.perf_counter()
+    distance_matrix = get_distance_matrix(points, altitude, num_processes, boundary_polygon)
+    tok = time.perf_counter()
+    print(f"Finished section {i+1} in {tok-tik} s")
+    return distance_matrix
 
-
-# [START data_model]
 def create_data_model(distance_matrix, init_route=None):
     """Stores the data for the problem."""
     data = {}
@@ -154,7 +158,7 @@ def run_solver(distance_matrix, points, boundary_polygon, length_col, use_initia
     # search_parameters.local_search_metaheuristic = (
     #     routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
     # )  # Optimize paths iteratively
-    search_parameters.time_limit.seconds = 30
+    # search_parameters.time_limit.seconds = 30
     # search_parameters.time_limit.seconds = 60 * 3
     search_parameters.log_search = True
     # [END parameters]
@@ -180,42 +184,72 @@ def main():
     """Entry point of the program."""
     # Instantiate the data problem.
     # [START data]
-    # kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
-    kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
+
+    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
+    # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
-    spacing = 50  # meters
-    num_processes = 5
-    num_sections = 1
-    use_initial_solution = True
-    pointFact = PointFactory(kml_filepath=kml_filepath, spacing=spacing, height=height, num_sections=num_sections)
-    distFact = DistanceFactory()
+    spacing = 15 # meters
+    num_processes = 4
+    num_sections = 5
 
-    pointFact.make_points()
-    boundary_polygons = pointFact.boundary_polygons
-    point_lists = pointFact.point_list
-    altitude = pointFact.altitude
-    length_cols = pointFact.length_cols
-    # boundary_polygons, point_lists, altitude, length_cols = pointFact.make_points()
+    pop_size = 100
+    generations = 100
+    dM = 0.1
+    best_criteria_num = 10
 
+    minimum_percent_improvement = 2 # in percent
+    penalty_cost = float('inf')
+
+    use_initial_solution = False
+    plot_sections = True
+    plot_initial_solutions = True
+    plot_solutions = False
+
+    point_generator = PointFactory(kml_filepath=kml_filepath, spacing=spacing, height=height, num_sections=num_sections)
+    point_generator.make_points()
+    point_generator.plot_points(show_usable=False, show_omitted=True)
+
+
+    # boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
+
+    point_lists = point_generator.all_points
+
+
+    total_sections = point_generator.total_sections
+
+    altitude = point_generator.altitude
+    base_boundary_polygon = point_generator.base_boundary_polygon
+    boundary_polygons = point_generator.boundary_polygons
+    length_cols = point_generator.all_length_cols
+
+
+    prep_time = 0
     distance_matrices = []
-    time_list = []
-    for i in range(num_sections):
+
+    with ProcessPoolExecutor(max_workers=num_processes) as executor:
         tik = time.perf_counter()
-        distFact.get_distance_matrix(point_lists[i], altitude, num_processes, boundary_polygons[i])
-        distance_matrix = distFact.distance_matrix
-        distance_matrices.append(distance_matrix)
+
+        result = list(executor.map(create_distance_matrices, [(i, point_lists[i], altitude, num_processes,
+                                                            boundary_polygons[i]) for i in range(total_sections)]))
         tok = time.perf_counter()
-        time_list.append(tok-tik)
-        print(f"Created distance matrix {i+1} in {tok-tik} s, creating data model...")
+        prep_time += tok - tik
 
-    # # multiprocess loop for each distance matrix in distance matrices
+        for distance_matrix in result:
+            distance_matrices.append(distance_matrix)
+
+    print(f"# of distance matrices: {len(distance_matrices)}")
+    print(f"Times for pre-processing: {prep_time}")
+
+    # multiprocess loop for each distance matrix in distance matrices
+    for i in range(total_sections):
+        initial_route = point_generator.create_initial_route(distance_matrices[i], length_cols[i])
+        if plot_initial_solutions:
+            point_generator.plotter.make_final_plot(point_lists[i], boundary_polygons[i], initial_route)
+
     with multiprocessing.Pool(processes=num_processes) as pool:
-        sol = pool.starmap(run_solver, [(distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], use_initial_solution) for i in range(num_sections)])
-    # print(distance_matrix)
-
-    print(f"Times for pre-processing: {time_list}")
-
-
+        sol = pool.starmap(run_solver, [
+            (distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], use_initial_solution) for i in
+            range(total_sections)])
 if __name__ == "__main__":
+    multiprocessing.set_start_method("spawn")
     main()
-    # [END program]

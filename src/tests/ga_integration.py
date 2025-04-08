@@ -8,7 +8,8 @@ import numpy as np
 import math
 import sys
 # sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
-from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
+# from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
+from src.tools.field_processing import PointFactory, PlottingFactory, get_distance_matrix
 
 import networkx as nx
 import random
@@ -170,8 +171,8 @@ def run_genetic_algorithm(section_number, distance_matrix, points, boundary_poly
 
     print(f"Initialized process for section {section_number + 1}")
     initial_route = create_initial_route(distance_matrix, length_col)
-    if plot_initial_solutions:
-        make_final_plot(points, boundary_polygon, initial_route)
+    # if plot_initial_solutions:
+    #     make_final_plot(points, boundary_polygon, initial_route)
 
     distance_matrix = np.asarray(distance_matrix)
     G = nx.from_numpy_array(distance_matrix)  # Make an empty graph and put nodes in it
@@ -189,18 +190,15 @@ def run_genetic_algorithm(section_number, distance_matrix, points, boundary_poly
                                                                                    best_criteria_num, penalty_cost,
                                                                                    minimum_percent_improvement, section_number)
     # print(f"Final route was: {final_route}, with a distance of: {best_dist}")
-    if plot_solutions:
-        make_final_plot(points, boundary_polygon, final_route)
+    # if plot_solutions:
+    #     make_final_plot(points, boundary_polygon, final_route)
 def main():
-    """Entry point of the program."""
-    # Instantiate the data problem.
-    # [START data]
 
     kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
     # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
-    spacing = 20 # meters
-    num_processes = 5
+    spacing = 15 # meters
+    num_processes = 4
     num_sections = 5
 
     pop_size = 100
@@ -211,45 +209,53 @@ def main():
     minimum_percent_improvement = 2 # in percent
     penalty_cost = float('inf')
 
-    plot_sections = False
-    plot_initial_solutions = False
-    plot_solutions = True
-    boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
+    plot_sections = True
+    plot_initial_solutions = True
+    plot_solutions = False
 
+    point_generator = PointFactory(kml_filepath=kml_filepath, spacing=spacing, height=height, num_sections=num_sections)
+    point_generator.make_points()
+    point_generator.plot_points(show_usable=False, show_omitted=True)
+
+
+    # boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
+
+    point_lists = point_generator.all_points
+
+
+    total_sections = point_generator.total_sections
+
+    altitude = point_generator.altitude
+    base_boundary_polygon = point_generator.base_boundary_polygon
+    boundary_polygons = point_generator.boundary_polygons
+    length_cols = point_generator.all_length_cols
+
+
+    prep_time = 0
     distance_matrices = []
-    # for i in range(num_sections):
-    #     tik = time.perf_counter()
-    #     distance_matrix = get_distance_matrix(point_lists[i], altitude, num_processes, boundary_polygons[i])
-    #     distance_matrices.append(distance_matrix)
-    #     tok = time.perf_counter()
-    #     time_list.append(tok-tik)
-    #     print(f"Created distance matrix {i+1} in {tok-tik} s, creating data model...")
-
-    # with multiprocessing.Pool(processes=num_processes) as pool:
-    #     time_and_dist_matr = pool.starmap(create_distance_matrices, [(point_lists[i], altitude, num_processes,
-    #                                                                   boundary_polygons[i]) for i in range(num_sections)])
-    #     time_list.append(time_and_dist_matr[0])
-    #     distance_matrices.append(time_and_dist_matr[1])
 
     with ProcessPoolExecutor(max_workers=num_processes) as executor:
         tik = time.perf_counter()
 
         result = list(executor.map(create_distance_matrices, [(i, point_lists[i], altitude, num_processes,
-                                                            boundary_polygons[i]) for i in range(num_sections)]))
+                                                            boundary_polygons[i]) for i in range(total_sections)]))
         tok = time.perf_counter()
-        prep_time = tok - tik
+        prep_time += tok - tik
 
         for distance_matrix in result:
             distance_matrices.append(distance_matrix)
-
-
-        # print(list(time_and_dist_matr))
 
     print(f"# of distance matrices: {len(distance_matrices)}")
     print(f"Times for pre-processing: {prep_time}")
 
     # multiprocess loop for each distance matrix in distance matrices
-    for i in range(num_sections):
+    for i in range(total_sections):
+        initial_route = point_generator.create_initial_route(distance_matrices[i], length_cols[i])
+        if plot_initial_solutions:
+            point_generator.plotter.make_final_plot(point_lists[i], boundary_polygons[i], initial_route)
+
+    # multiprocess loop for each distance matrix in distance matrices
+    for i in range(total_sections):
         run_genetic_algorithm(i, distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], pop_size,
                           generations, dM,
                           best_criteria_num, penalty_cost, minimum_percent_improvement,
