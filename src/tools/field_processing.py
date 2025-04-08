@@ -43,7 +43,7 @@ def get_distance_row(args):
                 (x[i] - x[row_index]) ** 2 + (y[i] - y[row_index]) ** 2 + (z[i] - z[row_index]) ** 2)
             distances.append(base_distance)
         else:
-            distances.append(np.inf)
+            distances.append(1e6)
     distances = np.array(distances)
     row = np.concatenate((np.zeros(row_index + 1), distances))
     return row
