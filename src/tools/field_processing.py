@@ -118,6 +118,7 @@ class PointFactory():
         self.num_omitted_sections: int = 0
         self.previous_omitted_sections: int = 0
         self.current_omitted_sections: int = 0
+        self.total_sections: int = 0
 
         self.base_boundary_polygon: Polygon = self.kml_file["geometry"][1]
 
@@ -131,6 +132,9 @@ class PointFactory():
         self.subsections: dict = {}
         self.omitted_points: list = []
         self.ind_list: list = []
+
+        self.all_points: list = []
+        self.all_length_cols: list = []
 
         self.plot_sections: bool = True
 
@@ -147,6 +151,12 @@ class PointFactory():
         nearest_dists = np.partition(dists, 1, axis=1)[:, 1]
         avg_spacing = np.mean(nearest_dists)
         return avg_spacing * scale
+
+    def append_extra_boundaries(self):
+        for i in range(len(self.omitted_points)):
+            self.boundary_polygons.append(self.base_boundary_polygon)
+
+        self.total_sections = len(self.boundary_polygons)
 
     def merge_border_points_back(self, main_cluster, candidate_points, max_dist=0.0002):
         """
@@ -266,6 +276,7 @@ class PointFactory():
     def split_omitted_clusters(self, min_samples=5, scale=1.5):
         cleaned_omitted_lists = []
         outlier_point_lists = []
+        remaining_outliers = []
 
         for cluster in self.omitted_points:
             if len(cluster) <= 1:
@@ -293,7 +304,6 @@ class PointFactory():
                 others = [pt for lbl, pts in subclusters.items() if lbl != main_label for pt in pts]
 
                 recovered, remaining_outliers = self.merge_border_points_back(main_cluster, others, max_dist=eps * 1.2)
-
                 # for pt in remaining_outliers:
                     # print(pt.x, pt.y)
 
@@ -307,6 +317,9 @@ class PointFactory():
 
 
         self.omitted_points = cleaned_omitted_lists
+        if remaining_outliers:
+            self.omitted_points.append(remaining_outliers)
+
         return cleaned_omitted_lists, outlier_point_lists
 
     def create_initial_route(self, distance_matrix, length_cols):
@@ -419,6 +432,12 @@ class PointFactory():
                 self.omitted_points.append(list)
 
         self.remove_omitted_points_from_total()
+        self.split_omitted_clusters()
+        self.append_extra_boundaries()
+
+        self.all_points = self.point_list + self.omitted_points
+        self.all_length_cols = self.length_cols + self.omitted_length_cols
+
     def plot_points(self, show_usable=True, show_omitted=False):
         for boundary_polygon in self.boundary_polygons:
             self.plotter.add_object_to_plot(boundary_polygon)
