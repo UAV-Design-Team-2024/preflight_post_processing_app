@@ -145,21 +145,21 @@ def run_solver(distance_matrix, points, boundary_polygon, length_col, use_initia
     # Setting first solution heuristic.
     # [START parameters]
     search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-    search_parameters.first_solution_strategy = (
-        routing_enums_pb2.FirstSolutionStrategy.AUTOMATIC
-    )
-    search_parameters.local_search_metaheuristic = (
-        routing_enums_pb2.LocalSearchMetaheuristic.AUTOMATIC)
-    #
-    # search_parameters = pywrapcp.DefaultRoutingSearchParameters()
     # search_parameters.first_solution_strategy = (
-    #     routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
-    # )  # Prefer shortest paths
+    #     routing_enums_pb2.FirstSolutionStrategy.AUTOMATIC
+    # )
     # search_parameters.local_search_metaheuristic = (
-    #     routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
-    # )  # Optimize paths iteratively
+    #     routing_enums_pb2.LocalSearchMetaheuristic.AUTOMATIC)
+
+    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+    search_parameters.first_solution_strategy = (
+        routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    )  # Prefer shortest paths
+    search_parameters.local_search_metaheuristic = (
+        routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+    )  # Optimize paths iteratively
     # search_parameters.time_limit.seconds = 30
-    # search_parameters.time_limit.seconds = 60 * 3
+    search_parameters.time_limit.seconds = 10
     search_parameters.log_search = True
     # [END parameters]
     routing.CloseModelWithParameters(search_parameters)
@@ -174,8 +174,7 @@ def run_solver(distance_matrix, points, boundary_polygon, length_col, use_initia
     if solution:
         print(f"Solution found! Printing...")
         path_seq = return_solution(data, manager, routing, solution)
-        plotFact = PlottingFactory()
-        plotFact.make_final_plot(points, boundary_polygon, path_seq)
+        return path_seq
     else:
         print("No solution found...")
     # [END return_solution]
@@ -188,7 +187,7 @@ def main():
     kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
     # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
-    spacing = 15 # meters
+    spacing = 10 # meters
     num_processes = 4
     num_sections = 5
 
@@ -207,7 +206,7 @@ def main():
 
     point_generator = PointFactory(kml_filepath=kml_filepath, spacing=spacing, height=height, num_sections=num_sections)
     point_generator.make_points()
-    point_generator.plot_points(show_usable=False, show_omitted=True)
+    # point_generator.plot_points(show_usable=False, show_omitted=True)
 
 
     # boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
@@ -246,10 +245,21 @@ def main():
         if plot_initial_solutions:
             point_generator.plotter.make_final_plot(point_lists[i], boundary_polygons[i], initial_route)
 
+    solutions = []
+    path_processing_times = []
     with multiprocessing.Pool(processes=num_processes) as pool:
+        tik = time.perf_counter()
         sol = pool.starmap(run_solver, [
             (distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], use_initial_solution) for i in
             range(total_sections)])
+        tok = time.perf_counter()
+        solutions.append(sol)
+        path_processing_times.append(tok-tik)
+
+    print(f"Total time for field processing: {sum(path_processing_times)}")
+    for i in range(total_sections):
+        point_generator.plotter.make_final_plot(point_lists[i], boundary_polygons[i], solutions[0][i])
+
 if __name__ == "__main__":
     multiprocessing.set_start_method("spawn")
     main()
