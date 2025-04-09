@@ -93,9 +93,9 @@ def return_solution(data, manager, routing, solution):
     # [END solution_printer]
     return path_seq
 
-def run_solver(distance_matrix, points, boundary_polygon, length_col, use_initial_solution):
+def run_solver(distance_matrix, points, boundary_polygon, length_col ,use_initial_solution, init_route = None):
     if use_initial_solution:
-        initial_route = create_initial_route(distance_matrix, length_col)
+        initial_route = init_route
         data = create_data_model(distance_matrix, initial_route)
     else:
         data = create_data_model(distance_matrix)
@@ -159,7 +159,7 @@ def run_solver(distance_matrix, points, boundary_polygon, length_col, use_initia
         routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
     )  # Optimize paths iteratively
     # search_parameters.time_limit.seconds = 30
-    search_parameters.time_limit.seconds = 10
+    search_parameters.time_limit.seconds = 60
     search_parameters.log_search = True
     # [END parameters]
     routing.CloseModelWithParameters(search_parameters)
@@ -245,20 +245,34 @@ def main():
         if plot_initial_solutions:
             point_generator.plotter.make_final_plot(point_lists[i], boundary_polygons[i], initial_route)
 
-    solutions = []
-    path_processing_times = []
+    init_solutions = []
+    init_path_processing_times = []
+
+    # First Pass
     with multiprocessing.Pool(processes=num_processes) as pool:
         tik = time.perf_counter()
         sol = pool.starmap(run_solver, [
             (distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], use_initial_solution) for i in
             range(total_sections)])
         tok = time.perf_counter()
-        solutions.append(sol)
-        path_processing_times.append(tok-tik)
+        init_solutions.append(sol)
+        init_path_processing_times.append(tok-tik)
 
-    print(f"Total time for field processing: {sum(path_processing_times)}")
+    final_solutions = []
+    final_path_processing_times = []
+
+    # Final Pass
+    with multiprocessing.Pool(processes=num_processes) as pool:
+        tik = time.perf_counter()
+        sol = pool.starmap(run_solver, [
+            (distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], True, init_solutions[0][i]) for i in
+            range(total_sections)])
+        tok = time.perf_counter()
+        final_solutions.append(sol)
+        final_path_processing_times.append(tok-tik)
+    print(f"Total time for field processing: {sum(final_path_processing_times)}")
     for i in range(total_sections):
-        point_generator.plotter.make_final_plot(point_lists[i], boundary_polygons[i], solutions[0][i])
+        point_generator.plotter.make_final_plot(point_lists[i], boundary_polygons[i], final_solutions[0][i])
 
 if __name__ == "__main__":
     multiprocessing.set_start_method("spawn")
