@@ -136,6 +136,8 @@ class PointFactory():
         self.all_points: list = []
         self.all_length_cols: list = []
 
+        self.point_idxs: list = []
+
         self.plot_sections: bool = True
 
         self.plotter = PlottingFactory()
@@ -415,6 +417,14 @@ class PointFactory():
 
         return final_points, length_col
 
+    # def create_point_dict(self):
+    #     for i, list in enumerate(self.all_points):
+    #         point_dict = {}
+    #         for j, p in enumerate(list):
+    #             point_dict[i] = {j: {'latitude': p.x, 'longitude': p.y, 'rel. altitude': self.altitude,
+    #                              'spray control': 1, 'misc': 0}}
+    #         self.point_idxs.append(point_dict)
+
     def make_points(self):
 
         point_list = []
@@ -422,9 +432,9 @@ class PointFactory():
         for boundary_polygon in self.boundary_polygons:
             print(f"Making polygon points for section {self.current_section_number}")
             points, len_col, omitted_len_col = self.create_points_in_polygon(boundary_polygon, self.spacing, self.altitude)
-            # points_boundary, len_col_boundary = create_points_on_boundary(boundary_polygon, spacing, altitude)
-            point_list.append(points) # + points_boundary
-            self.length_cols.append(len_col)# + len_col_boundary
+            # points_boundary, len_col_boundary = self.create_points_on_boundary(boundary_polygon, self.spacing, self.altitude)
+            point_list.append(points)# + points_boundary) # + points_boundary
+            self.length_cols.append(len_col)# + len_col_boundary)# + len_col_boundary
             self.omitted_length_cols.append(omitted_len_col)
             self.point_list.append(points)
             self.current_section_number += 1
@@ -439,6 +449,8 @@ class PointFactory():
 
         self.all_points = self.point_list + self.omitted_points
         self.all_length_cols = self.length_cols + self.omitted_length_cols
+
+        # self.create_point_dict()
 
     def plot_points(self, show_usable=True, show_omitted=False):
         for boundary_polygon in self.boundary_polygons:

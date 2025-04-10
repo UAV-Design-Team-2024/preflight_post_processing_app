@@ -27,7 +27,7 @@ import sys
 sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
 # from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
 from src.tools.field_processing import PointFactory, PlottingFactory, get_distance_matrix
-
+from src.tools.output import output_file
 def create_distance_matrices(args):
     i, points, altitude, num_processes, boundary_polygon = args
     print(f"Getting distance matrix for section {i+1}")
@@ -184,7 +184,7 @@ def main():
     # Instantiate the data problem.
     # [START data]
 
-    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
+    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_2.kml'
     # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
     spacing = 10 # meters
@@ -199,6 +199,7 @@ def main():
     minimum_percent_improvement = 2 # in percent
     penalty_cost = float('inf')
 
+    reinitialize = False
     use_initial_solution = False
     plot_sections = True
     plot_initial_solutions = True
@@ -206,7 +207,7 @@ def main():
 
     point_generator = PointFactory(kml_filepath=kml_filepath, spacing=spacing, height=height, num_sections=num_sections)
     point_generator.make_points()
-    # point_generator.plot_points(show_usable=False, show_omitted=True)
+    point_generator.plot_points(show_usable=False, show_omitted=True)
 
 
     # boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
@@ -261,19 +262,28 @@ def main():
     final_solutions = []
     final_path_processing_times = []
 
+    if reinitialize:
+        with multiprocessing.Pool(processes=num_processes) as pool:
+            tik = time.perf_counter()
+            sol = pool.starmap(run_solver, [
+                (distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], True, init_solutions[0][i])
+                for i in
+                range(total_sections)])
+            tok = time.perf_counter()
+            final_solutions.append(sol)
+            final_path_processing_times.append(tok - tik)
+    else:
+        final_solutions = init_solutions
+        final_path_processing_times = init_path_processing_times
+
+
     # Final Pass
-    with multiprocessing.Pool(processes=num_processes) as pool:
-        tik = time.perf_counter()
-        sol = pool.starmap(run_solver, [
-            (distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], True, init_solutions[0][i]) for i in
-            range(total_sections)])
-        tok = time.perf_counter()
-        final_solutions.append(sol)
-        final_path_processing_times.append(tok-tik)
+
     print(f"Total time for field processing: {sum(final_path_processing_times)}")
     for i in range(total_sections):
         point_generator.plotter.make_final_plot(point_lists[i], boundary_polygons[i], final_solutions[0][i])
 
+    output_file(final_solutions, point_lists, total_sections, altitude)
 if __name__ == "__main__":
     multiprocessing.set_start_method("spawn")
     main()
