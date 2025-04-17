@@ -52,14 +52,14 @@ build cmake_object_order_depends_target_field_processor: phony || .
 build CMakeFiles/field_processor.dir/main/ortools_integration.cpp.obj: CXX_COMPILER__field_processor_unscanned_Debug C$:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/main/ortools_integration.cpp || cmake_object_order_depends_target_field_processor
   DEP_FILE = CMakeFiles\field_processor.dir\main\ortools_integration.cpp.obj.d
   FLAGS = -g -std=gnu++17 -fdiagnostics-color=always
-  INCLUDES = -IC:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/external/eigen -IC:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/external/geos/include -IC:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/external/geos/lib -IC:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/main
+  INCLUDES = -IC:/OSGeo4W/include -IC:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/external/eigen -IC:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/main
   OBJECT_DIR = CMakeFiles\field_processor.dir
   OBJECT_FILE_DIR = CMakeFiles\field_processor.dir\main
 
 build CMakeFiles/field_processor.dir/main/field_processing.cpp.obj: CXX_COMPILER__field_processor_unscanned_Debug C$:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/main/field_processing.cpp || cmake_object_order_depends_target_field_processor
   DEP_FILE = CMakeFiles\field_processor.dir\main\field_processing.cpp.obj.d
   FLAGS = -g -std=gnu++17 -fdiagnostics-color=always
-  INCLUDES = -IC:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/external/eigen -IC:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/external/geos/include -IC:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/external/geos/lib -IC:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/main
+  INCLUDES = -IC:/OSGeo4W/include -IC:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/external/eigen -IC:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/main
   OBJECT_DIR = CMakeFiles\field_processor.dir
   OBJECT_FILE_DIR = CMakeFiles\field_processor.dir\main
 
@@ -73,8 +73,8 @@ build CMakeFiles/field_processor.dir/main/field_processing.cpp.obj: CXX_COMPILER
 
 build field_processor.exe: CXX_EXECUTABLE_LINKER__field_processor_Debug CMakeFiles/field_processor.dir/main/ortools_integration.cpp.obj CMakeFiles/field_processor.dir/main/field_processing.cpp.obj
   FLAGS = -g
-  LINK_LIBRARIES = -lgeos  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
-  LINK_PATH = -LC:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/external/geos/lib
+  LINK_LIBRARIES = -lgeos  -lgdal_i  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
+  LINK_PATH = -LC:/OSGeo4W/lib
   OBJECT_DIR = CMakeFiles\field_processor.dir
   POST_BUILD = cd .
   PRE_LINK = cd .

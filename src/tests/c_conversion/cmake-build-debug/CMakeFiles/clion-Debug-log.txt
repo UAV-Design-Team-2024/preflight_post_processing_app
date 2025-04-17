@@ -1,4 +1,4 @@
-"C:\Program Files\JetBrains\CLion 2024.3.5\bin\cmake\win\x64\bin\cmake.exe" -DCMAKE_BUILD_TYPE=Debug "-DCMAKE_MAKE_PROGRAM=C:/Program Files/JetBrains/CLion 2024.3.5/bin/ninja/win/x64/ninja.exe" -G Ninja -S C:\Users\corde\Documents\Python\preflight_post_processing_app\src\tests\c_conversion -B C:\Users\corde\Documents\Python\preflight_post_processing_app\src\tests\c_conversion\cmake-build-debug
--- Configuring done (0.1s)
+"C:\Program Files\JetBrains\CLion 2024.3.5\bin\cmake\win\x64\bin\cmake.exe" -DCMAKE_BUILD_TYPE=Debug "-DCMAKE_MAKE_PROGRAM=C:/Program Files/JetBrains/CLion 2024.3.5/bin/ninja/win/x64/ninja.exe" -DCMAKE_PREFIX_PATH=C:/OSGeo4W -G Ninja -S C:\Users\corde\Documents\Python\preflight_post_processing_app\src\tests\c_conversion -B C:\Users\corde\Documents\Python\preflight_post_processing_app\src\tests\c_conversion\cmake-build-debug
+-- Configuring done (0.2s)
 -- Generating done (0.0s)
 -- Build files have been written to: C:/Users/corde/Documents/Python/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug

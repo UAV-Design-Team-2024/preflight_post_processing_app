@@ -7,6 +7,7 @@
 #include <numeric>
 #include <iostream>
 #include <Dense>
+
 #include <geos_c.h>
 #include <geos/geom/Point.h>
 #include <geos/geom/LineString.h>
@@ -15,6 +16,10 @@
 #include <geos/geom/CoordinateSequence.h>
 #include <geos/geom/Geometry.h>
 #include <geos/geom/Polygon.h>
+
+#include <gdal.h>
+#include <gdal_priv.h>
+#include <ogrsf_frmts.h>
 
 using namespace std;
 using namespace geos::geom;
@@ -72,7 +77,7 @@ tuple<double, double, double> latlon_to_ecef(double lat_deg, double lon_deg, dou
 vector<double> get_distance_row(
     int row_index,
     const vector<Point*>& points,
-    const vector<const Geometry*>& boundary_edges,
+    const std::vector<GEOSGeometry*>& boundary_edges,
     const vector<double>& x,
     const vector<double>& y,
     const vector<double>& z
@@ -80,7 +85,7 @@ vector<double> get_distance_row(
     int n = points.size();
     vector<double> row(n, 0.0);
     for (int i = row_index + 1; i < n; ++i) {
-        if (is_valid_edge(points[row_index], points[i], boundary_edges)) {
+        if (is_valid_edge(x[i], y[i], x[row_index], y[row_index], boundary_edges)) {
             double dx = x[i] - x[row_index];
             double dy = y[i] - y[row_index];
             double dz = z[i] - z[row_index];
@@ -113,13 +118,19 @@ vector<vector<double>> get_distance_matrix(
 
     // Build boundary edges
     const CoordinateSequence* coords = boundary_polygon->getExteriorRing()->getCoordinatesRO();
-    vector<const Geometry*> boundary_edges;
+    std::vector<GEOSGeometry*> boundary_edges;
     for (size_t i = 0; i < coords->size() - 1; ++i) {
-        vector<Coordinate> edge_coords = {
-            coords->getAt(i),
-            coords->getAt(i + 1)
-        };
-        boundary_edges.push_back(factory->createLineString(edge_coords));
+        Coordinate c1 = coords->getAt(i);
+        Coordinate c2 = coords->getAt(i + 1);
+
+        GEOSCoordSequence* seq = GEOSCoordSeq_create(2, 2);
+        GEOSCoordSeq_setX(seq, 0, c1.x);
+        GEOSCoordSeq_setY(seq, 0, c1.y);
+        GEOSCoordSeq_setX(seq, 1, c2.x);
+        GEOSCoordSeq_setY(seq, 1, c2.y);
+
+        GEOSGeometry* line = GEOSGeom_createLineString(seq);
+        boundary_edges.push_back(line);
     }
     // Multithreading setup
     vector<future<vector<double>>> futures;
@@ -142,4 +153,73 @@ vector<vector<double>> get_distance_matrix(
     }
 
     return matrix;
+}
+
+
+typedef struct PointFactory {
+    const char* kml_filepath;
+    OGRGeometryH kml_file;
+
+    double spacing;
+    double height;
+
+    int path_direction;
+    int num_sections;
+    int current_section_number;
+    int num_fitted_sections;
+    int num_omitted_sections;
+    int previous_omitted_sections;
+    int current_omitted_sections;
+    int total_sections;
+
+    GEOSGeometry* base_boundary_polygon;
+
+
+
+} PointFactory;
+
+
+void pf_make_points(PointFactory* pf) {
+
+}
+
+void pf_load_kml(PointFactory* pf) {
+    GDALAllRegister();
+
+    GDALDatasetH dataset = GDALOpenEx(pf->kml_filepath, GDAL_OF_VECTOR, NULL, NULL, NULL);
+    if (!dataset) {
+        fprintf(stderr, "Failed to open KML file: %s\n", pf->kml_filepath);
+        return;
+    }
+
+    OGRLayerH layer = GDALDatasetGetLayer(dataset, 0);
+    OGR_L_ResetReading(layer);
+
+    OGRFeatureH feature = OGR_L_GetNextFeature(layer);
+    if (feature) {
+        OGRGeometryH geom = OGR_F_GetGeometryRef(feature);
+        if (geom) {
+            pf->kml_file = OGR_G_Clone(geom);
+        }
+        OGR_F_Destroy(feature);
+    }
+
+    GDALClose(dataset);
+}
+
+void init_PointFactory(PointFactory* pf, const char* kml_filepath, double spacing, double height, int num_sections) {
+    pf -> kml_filepath = kml_filepath;
+    pf_load_kml(pf);
+
+    pf -> spacing = spacing;
+    pf -> height = height;
+
+    pf -> path_direction = 0;
+    pf -> num_sections = num_sections;
+    pf -> current_section_number = 1;
+    pf -> num_fitted_sections = 0;
+    pf -> num_omitted_sections = 0;
+    pf -> previous_omitted_sections = 0;
+    pf -> current_omitted_sections = 0;
+    pf -> total_sections = 0;
 }

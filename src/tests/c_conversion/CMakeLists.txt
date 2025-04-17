@@ -5,15 +5,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(
+        "C:/OSGeo4W/include"
         external/eigen
-        external/geos/include
-        external/geos/lib
         main
 
 )
 
 link_directories(
-        external/geos/lib
+        "C:/OSGeo4W/lib"
 )
 
 add_executable(field_processor
@@ -21,4 +20,4 @@ add_executable(field_processor
         main/field_processing.cpp
 )
 
-target_link_libraries(field_processor geos)
+target_link_libraries(field_processor geos gdal_i)
