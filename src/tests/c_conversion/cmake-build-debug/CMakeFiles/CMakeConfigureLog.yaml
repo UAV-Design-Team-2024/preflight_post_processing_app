@@ -109,8 +109,8 @@ events:
     checks:
       - "Detecting C compiler ABI info"
     directories:
-      source: "C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-ybfvxc"
-      binary: "C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-ybfvxc"
+      source: "C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-335izi"
+      binary: "C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-335izi"
     cmakeVariables:
       CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
       CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
@@ -119,11 +119,11 @@ events:
       variable: "CMAKE_C_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: 'C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-ybfvxc'
+        Change Dir: 'C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-335izi'
         
-        Run Build Command(s): "C:/Program Files/JetBrains/CLion 2025.1/bin/ninja/win/x64/ninja.exe" -v cmTC_5cae9
-        [1/2] C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\MSVC\\1443~1.348\\bin\\Hostx64\\x64\\cl.exe  /nologo   /DWIN32 /D_WINDOWS  /Zi /Ob0 /Od /RTC1 -MDd /showIncludes /FoCMakeFiles\\cmTC_5cae9.dir\\CMakeCCompilerABI.c.obj /FdCMakeFiles\\cmTC_5cae9.dir\\ /FS -c "C:\\Program Files\\JetBrains\\CLion 2025.1\\bin\\cmake\\win\\x64\\share\\cmake-3.31\\Modules\\CMakeCCompilerABI.c"
-        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\JetBrains\\CLion 2025.1\\bin\\cmake\\win\\x64\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_5cae9.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\MSVC\\1443~1.348\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_5cae9.dir\\CMakeCCompilerABI.c.obj  /out:cmTC_5cae9.exe /implib:cmTC_5cae9.lib /pdb:cmTC_5cae9.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        Run Build Command(s): "C:/Program Files/JetBrains/CLion 2025.1/bin/ninja/win/x64/ninja.exe" -v cmTC_6f899
+        [1/2] C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\MSVC\\1443~1.348\\bin\\Hostx64\\x64\\cl.exe  /nologo   /DWIN32 /D_WINDOWS  /Zi /Ob0 /Od /RTC1 -MDd /showIncludes /FoCMakeFiles\\cmTC_6f899.dir\\CMakeCCompilerABI.c.obj /FdCMakeFiles\\cmTC_6f899.dir\\ /FS -c "C:\\Program Files\\JetBrains\\CLion 2025.1\\bin\\cmake\\win\\x64\\share\\cmake-3.31\\Modules\\CMakeCCompilerABI.c"
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\JetBrains\\CLion 2025.1\\bin\\cmake\\win\\x64\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_6f899.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\MSVC\\1443~1.348\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_6f899.dir\\CMakeCCompilerABI.c.obj  /out:cmTC_6f899.exe /implib:cmTC_6f899.lib /pdb:cmTC_6f899.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
         
       exitCode: 0
   -
@@ -163,8 +163,8 @@ events:
     checks:
       - "Detecting CXX compiler ABI info"
     directories:
-      source: "C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-bspenv"
-      binary: "C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-bspenv"
+      source: "C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-ggog2g"
+      binary: "C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-ggog2g"
     cmakeVariables:
       CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
       CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
@@ -174,11 +174,11 @@ events:
       variable: "CMAKE_CXX_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: 'C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-bspenv'
+        Change Dir: 'C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-ggog2g'
         
-        Run Build Command(s): "C:/Program Files/JetBrains/CLion 2025.1/bin/ninja/win/x64/ninja.exe" -v cmTC_dbe72
-        [1/2] C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\MSVC\\1443~1.348\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP   /DWIN32 /D_WINDOWS /EHsc  /Zi /Ob0 /Od /RTC1 -MDd /showIncludes /FoCMakeFiles\\cmTC_dbe72.dir\\CMakeCXXCompilerABI.cpp.obj /FdCMakeFiles\\cmTC_dbe72.dir\\ /FS -c "C:\\Program Files\\JetBrains\\CLion 2025.1\\bin\\cmake\\win\\x64\\share\\cmake-3.31\\Modules\\CMakeCXXCompilerABI.cpp"
-        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\JetBrains\\CLion 2025.1\\bin\\cmake\\win\\x64\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_dbe72.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\MSVC\\1443~1.348\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_dbe72.dir\\CMakeCXXCompilerABI.cpp.obj  /out:cmTC_dbe72.exe /implib:cmTC_dbe72.lib /pdb:cmTC_dbe72.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        Run Build Command(s): "C:/Program Files/JetBrains/CLion 2025.1/bin/ninja/win/x64/ninja.exe" -v cmTC_c1036
+        [1/2] C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\MSVC\\1443~1.348\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP   /DWIN32 /D_WINDOWS /EHsc  /Zi /Ob0 /Od /RTC1 -MDd /showIncludes /FoCMakeFiles\\cmTC_c1036.dir\\CMakeCXXCompilerABI.cpp.obj /FdCMakeFiles\\cmTC_c1036.dir\\ /FS -c "C:\\Program Files\\JetBrains\\CLion 2025.1\\bin\\cmake\\win\\x64\\share\\cmake-3.31\\Modules\\CMakeCXXCompilerABI.cpp"
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\JetBrains\\CLion 2025.1\\bin\\cmake\\win\\x64\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_c1036.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\MSVC\\1443~1.348\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_c1036.dir\\CMakeCXXCompilerABI.cpp.obj  /out:cmTC_c1036.exe /implib:cmTC_c1036.lib /pdb:cmTC_c1036.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
         
       exitCode: 0
   -
@@ -222,8 +222,8 @@ events:
     checks:
       - "Performing Test HAS_MSVC_GL_LTCG"
     directories:
-      source: "C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-20jxx3"
-      binary: "C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-20jxx3"
+      source: "C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-vxt1wp"
+      binary: "C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-vxt1wp"
     cmakeVariables:
       CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
       CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
@@ -232,11 +232,11 @@ events:
       variable: "HAS_MSVC_GL_LTCG"
       cached: true
       stdout: |
-        Change Dir: 'C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-20jxx3'
+        Change Dir: 'C:/Users/corde/Documents/Projects/preflight_post_processing_app/src/tests/c_conversion/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-vxt1wp'
         
-        Run Build Command(s): "C:/Program Files/JetBrains/CLion 2025.1/bin/ninja/win/x64/ninja.exe" -v cmTC_45c0a
-        [1/2] C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\MSVC\\1443~1.348\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DHAS_MSVC_GL_LTCG  /DWIN32 /D_WINDOWS /EHsc  /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd   /GL /showIncludes /FoCMakeFiles\\cmTC_45c0a.dir\\src.cxx.obj /FdCMakeFiles\\cmTC_45c0a.dir\\ /FS -c C:\\Users\\corde\\Documents\\Projects\\preflight_post_processing_app\\src\\tests\\c_conversion\\cmake-build-debug\\CMakeFiles\\CMakeScratch\\TryCompile-20jxx3\\src.cxx
-        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\JetBrains\\CLion 2025.1\\bin\\cmake\\win\\x64\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_45c0a.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\MSVC\\1443~1.348\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_45c0a.dir\\src.cxx.obj  /out:cmTC_45c0a.exe /implib:cmTC_45c0a.lib /pdb:cmTC_45c0a.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  -LTCG  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        Run Build Command(s): "C:/Program Files/JetBrains/CLion 2025.1/bin/ninja/win/x64/ninja.exe" -v cmTC_0afb9
+        [1/2] C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\MSVC\\1443~1.348\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DHAS_MSVC_GL_LTCG  /DWIN32 /D_WINDOWS /EHsc  /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd   /GL /showIncludes /FoCMakeFiles\\cmTC_0afb9.dir\\src.cxx.obj /FdCMakeFiles\\cmTC_0afb9.dir\\ /FS -c C:\\Users\\corde\\Documents\\Projects\\preflight_post_processing_app\\src\\tests\\c_conversion\\cmake-build-debug\\CMakeFiles\\CMakeScratch\\TryCompile-vxt1wp\\src.cxx
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\JetBrains\\CLion 2025.1\\bin\\cmake\\win\\x64\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_0afb9.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\MSVC\\1443~1.348\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_0afb9.dir\\src.cxx.obj  /out:cmTC_0afb9.exe /implib:cmTC_0afb9.lib /pdb:cmTC_0afb9.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  -LTCG  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
         
       exitCode: 0
 ...

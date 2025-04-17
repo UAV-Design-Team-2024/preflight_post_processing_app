@@ -214,6 +214,7 @@ def main():
 
     point_lists = point_generator.all_points
 
+    print(point_lists[0])
 
     total_sections = point_generator.total_sections
 
