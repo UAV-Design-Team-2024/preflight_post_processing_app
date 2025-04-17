@@ -1,3 +1,6 @@
+"""
+Run file to process the field and generate points and sections to then optimize the path.
+"""
 import os
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
@@ -24,6 +27,14 @@ def check_symmetric(a, rtol=1e-05, atol=1e-08):
 def is_valid_edge(p1, p2, boundary_edges):
     """
     Check if a path between two points crosses the boundary edges.
+
+    Args:
+        p1 (Point): The first point.
+        p2 (Point): The second point.
+        boundary_edges (list): List of boundary edges (LineString objects).
+    
+    Returns:
+        bool: True if the edge is valid (does not cross any boundary edges), False otherwise.
     """
     line = LineString([p1.coords[0], p2.coords[0]])
 
@@ -35,6 +46,17 @@ def is_valid_edge(p1, p2, boundary_edges):
 
 
 def get_distance_row(args):
+    """
+    Calculate the distance from a point to all other points in the list.
+
+    Args:
+        args (tuple): A tuple containing the coordinates of the points, the index of the row,
+                      the list of points, and the boundary edges.
+    
+    Returns:
+        row (np.ndarray): A row of distances from the point at row_index to all other points.
+    """
+
     x, y, z, row_index, points, boundary_edges = args
     distances = []
     for i in range(row_index + 1, len(x)):
@@ -50,7 +72,18 @@ def get_distance_row(args):
 
 
 def get_distance_matrix(points, alt, num_processes, boundary_polygon):
-    """Generates a matrix in parallel using multiprocessing."""
+    """
+    Generates a matrix in parallel using multiprocessing.
+
+    Args:
+        points (list): List of Point objects.
+        alt (float): Altitude.
+        num_processes (int): Number of processes to use for parallel computation.
+        boundary_polygon (Polygon): The boundary polygon to check against.
+
+    Returns:
+        distance_matrix (list): A distance matrix where each entry [i][j] is the distance from point i to point j.
+    """
     px = np.array([point.x for point in points])
     py = np.array([point.y for point in points])
     altitude = np.array([alt for _ in range(len(points))])
@@ -77,7 +110,15 @@ def get_distance_matrix(points, alt, num_processes, boundary_polygon):
 def latlon_to_ecef(lat_deg, lon_deg, alt_m):
     """
     Converts latitude, longitude (in degrees), and altitude (in meters) to
-    ECEF coordinates.
+    ECEF (Earth-Centric Earth-Fixed Frame) coordinates.
+
+    Args:
+        lat_deg (float): Latitude in degrees.
+        lon_deg (float): Longitude in degrees.
+        alt_m (float): Altitude in meters.
+    
+    Returns:
+        x, y, z (tuple): ECEF coordinates (x, y, z) in meters.
     """
     # WGS 84 ellipsoid parameters
     a = 6378137.0  # semi-major axis (equatorial radius in meters)
@@ -96,6 +137,16 @@ def latlon_to_ecef(lat_deg, lon_deg, alt_m):
 
 
 def get_coord_matrix(points, alt):
+    """
+    Converts a list of Point objects to a list of ECEF coordinates.
+    
+    Args:
+        points (list): List of Point objects.
+        alt (float): Altitude.
+    
+    Returns:
+        coords (list): List of tuples containing ECEF coordinates (x, y).
+    """
     coords = []
     for i in range(int(len(points))):
         x1, y1, z1 = latlon_to_ecef(points[i].x, points[i].y, alt)
@@ -103,7 +154,23 @@ def get_coord_matrix(points, alt):
     return coords
 
 class PointFactory():
+    """
+    Class to generate sections of the field and generate points in each section.
+    """
     def __init__(self, kml_filepath, spacing, height, num_sections):
+        """
+        Initialize the PointFactory with the KML file path, spacing, height, and number of sections.
+        Store variables used across the class.
+        
+        Args:
+            kml_filepath (str): Path to the KML file.
+            spacing (float): Spacing between points.
+            height (float): Height of the points.
+            num_sections (int): Number of sections to divide the field into.
+        
+        Returns:
+            None
+        """
         self.kml_filepath: str = kml_filepath
         self.kml_file = gp.read_file(f'{self.kml_filepath}', layer='QGroundControl Plan KML')
 
@@ -146,15 +213,28 @@ class PointFactory():
     def adaptive_eps(self, cluster_points, scale=1.5):
         """
         Estimate a good eps value for DBSCAN based on point spacing.
+
+        Args:
+            cluster_points (list): List of points in the cluster.
+        
+        Kwargs:
+            scale (float): Scaling factor for the average spacing.
+
+        Returns:
+            scaled_avg_spacing (float): Scaled average spacing between points.
         """
         coords = np.array([[p.x, p.y] for p in cluster_points])
         dists = distance_matrix(coords, coords)
         # Exclude self-distances (0.0) by masking the diagonal
         nearest_dists = np.partition(dists, 1, axis=1)[:, 1]
         avg_spacing = np.mean(nearest_dists)
-        return avg_spacing * scale
+        scaled_avg_spacing = avg_spacing * scale
+        return scaled_avg_spacing
 
     def append_extra_boundaries(self):
+        """
+        Append the base boundary polygon to the omitted points list for each omitted section.
+        """
         for i in range(len(self.omitted_points)):
             self.boundary_polygons.append(self.base_boundary_polygon)
 
@@ -164,6 +244,17 @@ class PointFactory():
         """
         Merge nearby border/noise points back into the main cluster.
         Only if they're within `max_dist` of any point in the main cluster.
+
+        Args:
+            main_cluster (list): List of main cluster points.
+            candidate_points (list): List of candidate points to be merged.
+        
+        Kwargs:
+            max_dist (float): Maximum distance for merging.
+        
+        Returns:
+            new_main (list): Updated main cluster with merged points.
+            remaining_candidates (list): Remaining candidate points that were not merged.
         """
         main_coords = np.array([[p.x, p.y] for p in main_cluster])
         new_main = list(main_cluster)
@@ -190,6 +281,9 @@ class PointFactory():
 
         return new_main, [pt for pt in candidate_points if pt not in removed]
     def remove_omitted_points_from_total(self):
+        """
+        Remove omitted points from the total point list to avoid duplicates.
+        """
         flat_list1 = [pt for sublist in self.point_list for pt in sublist]
         flat_list2 = [pt for sublist in self.omitted_points for pt in sublist]
 
@@ -207,6 +301,16 @@ class PointFactory():
         self.num_fitted_sections = len(self.point_list)
         self.num_omitted_sections = len(self.omitted_points)
     def divide_boundary_polygon(self, boundary_polygon, cols):
+        """
+        Divides the boundary polygon into smaller polygons based on the number of columns.
+        
+        Args:
+            boundary_polygon (Polygon): The boundary polygon to be divided.
+            cols (int): Number of columns to divide the polygon into.
+        
+        Returns:
+            split_polygons (list): List of smaller polygons created from the division.
+        """
         minx, miny, maxx, maxy = boundary_polygon.bounds
         width = (maxx - minx) / cols
         height = (maxy - miny)
@@ -219,6 +323,17 @@ class PointFactory():
         return split_polygons
 
     def perform_boundary_check(self, polygon, column_points):
+        """
+        Check if the points in the column are within the polygon boundary and split them into subsections if needed.
+        
+        Args:
+            polygon (Polygon): The polygon boundary to check against.
+            column_points (list): List of points in the column.
+
+        Returns:
+            omitted_points (list): List of points that are outside the polygon boundary.
+            column_points (list): List of points that are within the polygon boundary.
+        """
         # print("New column")
         omitted_points = []
         ind_list = self.ind_list
@@ -276,6 +391,17 @@ class PointFactory():
         return omitted_points, column_points
 
     def split_omitted_clusters(self, min_samples=5, scale=1.5):
+        """
+        Splits omitted clusters into subclusters using DBSCAN and merges border points back into the main cluster.
+        
+        Kwargs:
+            min_samples (int): Minimum number of samples in a neighborhood for a point to be considered a core point.
+            scale (float): Scaling factor for the average spacing.
+        
+        Returns:
+            cleaned_omitted_lists (list): List of cleaned omitted clusters.
+            outlier_point_lists (list): List of outlier points that were not merged back into the main cluster.
+        """
         cleaned_omitted_lists = []
         outlier_point_lists = []
         remaining_outliers = []
@@ -325,6 +451,16 @@ class PointFactory():
         return cleaned_omitted_lists, outlier_point_lists
 
     def create_initial_route(self, distance_matrix, length_cols):
+        """
+        Creates an initial route based for the solver.
+        
+        Args:
+            distance_matrix (list): Distance matrix for the points.
+            length_cols (list): List of lengths of each column.
+        
+        Returns:
+            finalized_init_route (list): A list of points representing the initial route.
+        """
         init_route = np.arange(0, len(distance_matrix), 1).tolist()
         start = 0
         init_routes = []
@@ -385,6 +521,17 @@ class PointFactory():
         return points, length_cols, omitted_len_cols
 
     def create_points_on_boundary(self, polygon, spacing, altitude):
+        """
+        Generates points along the right boundary of a polygon.
+        
+        Args:
+            polygon (Polygon): The polygon to generate points from.
+            spacing (float): The spacing between points.
+            altitude (float): The altitude for the points.
+
+        Returns:
+            tuple: A list of points along the right boundary and a list of lengths of the columns.
+        """
         # Find the rightmost x-coordinate
         max_x = max(x for x, y, z in polygon.exterior.coords)
         y_values = [y for x, y, z in polygon.exterior.coords if x == max_x]
@@ -426,6 +573,9 @@ class PointFactory():
     #         self.point_idxs.append(point_dict)
 
     def make_points(self):
+        """
+        Generates points in the field based on the KML file and the specified parameters.
+        """
 
         point_list = []
         self.boundary_polygons = self.divide_boundary_polygon(self.base_boundary_polygon, self.num_sections)
@@ -453,6 +603,13 @@ class PointFactory():
         # self.create_point_dict()
 
     def plot_points(self, show_usable=True, show_omitted=False):
+        """
+        Plots the points and boundary polygons on a map using matplotlib.
+
+        Kwargs:
+            show_usable (bool): Whether to show usable points.
+            show_omitted (bool): Whether to show omitted points.
+        """
         for boundary_polygon in self.boundary_polygons:
             self.plotter.add_object_to_plot(boundary_polygon)
             if show_usable:
@@ -464,10 +621,16 @@ class PointFactory():
         self.plotter.show_plots()
 
 class PlottingFactory():
+    """
+    Class to handle plotting of points and polygons using matplotlib and Shapely.
+    """
     def __init__(self):
         pass
 
     def add_object_to_plot(self, object):
+        """
+        Adds a Shapely object (Point, LineString, Polygon, etc.) to the plot.
+        """
         if isinstance(object, Polygon) or isinstance(object, MultiPolygon):
             shapely.plotting.plot_polygon(object)
 
@@ -477,6 +640,11 @@ class PlottingFactory():
     def make_final_plot(self, points=None, boundary_polygon=None, path=None):
         """
         Plots the points, boundary polygon, and path on a map.
+
+        Kwargs:
+            points (list): List of points to plot.
+            boundary_polygon (Polygon): The boundary polygon to plot.
+            path (list): List of indices representing the path to plot.
         """
         fig, ax = mpl.subplots()
         if points:
@@ -497,11 +665,23 @@ class PlottingFactory():
         self.show_plots()
 
     def plot_line_with_arrows(self, line, ax, arrow_interval=1):
-        """Plots a Shapely LineString with arrows at specified intervals."""
+        """
+        Plots a Shapely LineString with arrows at specified intervals.
+        
+        Args:
+            line (LineString): The LineString to plot.
+            ax (matplotlib.axes.Axes): The axes to plot on.
+        
+        Kwargs:
+            arrow_interval (float): The distance between arrows.
+        """
         x, y = line.xy
         x = np.asarray(x)
         y = np.asarray(y)
         ax.quiver(x[:-1], y[:-1], x[1:] - x[:-1], y[1:] - y[:-1], scale_units='xy', angles='xy', scale=1)
 
     def show_plots(self):
+        """
+        Displays the plots.
+        """
         mpl.show()
