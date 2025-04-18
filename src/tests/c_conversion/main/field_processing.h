@@ -4,6 +4,7 @@
 
 #ifndef FIELD_PROCESSING_H
 #define FIELD_PROCESSING_H
+#include <geos_c.h>
 
 #endif //FIELD_PROCESSING_H
 
@@ -18,14 +19,28 @@
 using namespace std;
 using namespace geos::geom;
 
-//bool check_symmetric(const Eigen::MatrixXd& mat, double rtol = 1e-5, double atol = 1e-8);
 
-//tuple<double, double, double> latlon_to_ecef(double lat_deg, double lon_deg, double alt_m);
+tuple<double, double, double> latlon_to_ecef(const std::vector<double>& lat_deg,
+    const std::vector<double>& lon_deg,
+    const std::vector<double>& alt_m,
+    std::vector<double>& x,
+    std::vector<double>& y,
+    std::vector<double>& z);
 
-bool is_valid_edge(const Point* p1, const Point* p2, const vector<const Geometry*>& boundary_edges);
+bool is_valid_edge(double x1, double y1,
+    double x2, double y2,
+    const std::vector<GEOSGeometry*>& boundary_edges,
+    GEOSContextHandle_t context);
 
-vector<double> get_distance_row(int row_index, const vector<Point*>& points,
-                                const vector<const Geometry*>& boundary_edges,
-                                const vector<double>& x, const vector<double>& y, const vector<double>& z);
+vector<double> get_distance_row(    int row_index,
+    const std::vector<GEOSGeometry*>& points,  // not directly used, but kept for signature compatibility
+    const std::vector<GEOSGeometry*>& boundary_edges,
+    const std::vector<double>& x,
+    const std::vector<double>& y,
+    const std::vector<double>& z,
+    GEOSContextHandle_t context);
 
-//vector<vector<double>> get_distance_matrix(const vector<Point*>& points, double altitude, const Polygon* boundary_polygon, int num_threads);
+vector<vector<double>> get_distance_matrix( const std::vector<std::pair<double, double>>& latlon,
+    double alt,
+    const std::vector<GEOSGeometry*>& boundary_edges,
+    GEOSContextHandle_t context);

@@ -26,13 +26,13 @@ from ortools.constraint_solver import pywrapcp
 import sys
 sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
 # from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
-from src.tools.field_processing import PointFactory, PlottingFactory, get_distance_matrix
+from src.tools.field_processing import PointFactory, PlottingFactory, get_distance_matrix_c
 from src.tools.output import output_file
 def create_distance_matrices(args):
     i, points, altitude, num_processes, boundary_polygon = args
     print(f"Getting distance matrix for section {i+1}")
     tik = time.perf_counter()
-    distance_matrix = get_distance_matrix(points, altitude, num_processes, boundary_polygon)
+    distance_matrix = get_distance_matrix_c(points, altitude, num_processes, boundary_polygon)
     tok = time.perf_counter()
     print(f"Finished section {i+1} in {tok-tik} s")
     return distance_matrix
@@ -184,10 +184,10 @@ def main():
     # Instantiate the data problem.
     # [START data]
 
-    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_2.kml'
+    kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
     # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
-    spacing = 10 # meters
+    spacing = 4.5  # meters
     num_processes = 4
     num_sections = 5
 
@@ -213,9 +213,6 @@ def main():
     # boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
 
     point_lists = point_generator.all_points
-
-    print(point_lists[0])
-
     total_sections = point_generator.total_sections
 
     altitude = point_generator.altitude

@@ -1,7 +1,6 @@
 """
 Run file to process the field and generate points and sections to then optimize the path.
 """
-import os
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 import geopandas as gp
@@ -19,6 +18,12 @@ from shapely.ops import unary_union
 from sklearn.cluster import DBSCAN
 from scipy.spatial import distance_matrix
 
+import sys
+sys.path.append(r'C:\Users\corde\Documents\Projects\preflight_post_processing_app\src\tests\c_conversion\cmake-build-debug')
+import os
+os.add_dll_directory(r"C:\OSGeo4W\bin")
+import field_processing_c_module
+from field_processing_c_module import get_distance_matrix
 
 def check_symmetric(a, rtol=1e-05, atol=1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)
@@ -71,40 +76,51 @@ def get_distance_row(args):
     return row
 
 
-def get_distance_matrix(points, alt, num_processes, boundary_polygon):
-    """
-    Generates a matrix in parallel using multiprocessing.
+# def get_distance_matrix(points, alt, num_processes, boundary_polygon):
+#     """
+#     Generates a matrix in parallel using multiprocessing.
+#
+#     Args:
+#         points (list): List of Point objects.
+#         alt (float): Altitude.
+#         num_processes (int): Number of processes to use for parallel computation.
+#         boundary_polygon (Polygon): The boundary polygon to check against.
+#
+#     Returns:
+#         distance_matrix (list): A distance matrix where each entry [i][j] is the distance from point i to point j.
+#     """
+#     px = np.array([point.x for point in points])
+#     py = np.array([point.y for point in points])
+#     altitude = np.array([alt for _ in range(len(points))])
+#
+#     x, y, z = latlon_to_ecef(px, py, altitude)
+#     num_rows = len(points)
+#
+#     # Generate boundary edges as LineString objects
+#     boundary_coords = list(boundary_polygon.exterior.coords)
+#     boundary_edges = [LineString([boundary_coords[i], boundary_coords[i + 1]]) for i in
+#                       range(len(boundary_coords) - 1)]
+#
+#     with ProcessPoolExecutor(max_workers=num_processes) as executor:
+#         rows = executor.map(get_distance_row,
+#                             [(x, y, z, i, points, boundary_edges) for i in range(num_rows)])
+#
+#     rows = list(rows)
+#     # rows = [item for sublist in rows for item in sublist]
+#     # Make the matrix symmetric
+#     distance_matrix = np.array(rows)
+#     distance_matrix = (distance_matrix + distance_matrix.T).tolist()
+#     return distance_matrix
 
-    Args:
-        points (list): List of Point objects.
-        alt (float): Altitude.
-        num_processes (int): Number of processes to use for parallel computation.
-        boundary_polygon (Polygon): The boundary polygon to check against.
+def get_distance_matrix_c(points, alt, num_processes, boundary_polygon):
+    latlon = [(float(p.x), float(p.y)) for p in points]
+    altitude = alt
 
-    Returns:
-        distance_matrix (list): A distance matrix where each entry [i][j] is the distance from point i to point j.
-    """
-    px = np.array([point.x for point in points])
-    py = np.array([point.y for point in points])
-    altitude = np.array([alt for _ in range(len(points))])
-
-    x, y, z = latlon_to_ecef(px, py, altitude)
-    num_rows = len(points)
-
-    # Generate boundary edges as LineString objects
     boundary_coords = list(boundary_polygon.exterior.coords)
-    boundary_edges = [LineString([boundary_coords[i], boundary_coords[i + 1]]) for i in
-                      range(len(boundary_coords) - 1)]
+    boundary_edges = [LineString([boundary_coords[i], boundary_coords[i + 1]]).wkt for i in
+                          range(len(boundary_coords) - 1)]
 
-    with ProcessPoolExecutor(max_workers=num_processes) as executor:
-        rows = executor.map(get_distance_row,
-                            [(x, y, z, i, points, boundary_edges) for i in range(num_rows)])
-
-    rows = list(rows)
-    # rows = [item for sublist in rows for item in sublist]
-    # Make the matrix symmetric
-    distance_matrix = np.array(rows)
-    distance_matrix = (distance_matrix + distance_matrix.T).tolist()
+    distance_matrix = get_distance_matrix(latlon, altitude, boundary_edges)
     return distance_matrix
 
 def latlon_to_ecef(lat_deg, lon_deg, alt_m):

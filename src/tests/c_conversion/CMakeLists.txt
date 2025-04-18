@@ -25,7 +25,7 @@ add_executable(field_processor
 )
 
 
-target_link_libraries(field_processor geos gdal_i)
+target_link_libraries(field_processor geos geos_c gdal_i)
 
 # Test
 add_executable(test_geos_wkt
@@ -33,21 +33,22 @@ add_executable(test_geos_wkt
 
 target_include_directories(test_geos_wkt PRIVATE
         "C:/OSGeo4W/include"
-        "C:/OSGeo4W/include/geos"
 )
 target_link_libraries(test_geos_wkt
         geos
+        geos_c
 )
 
 add_subdirectory(external/pybind11)
 
-pybind11_add_module(field_processing
+pybind11_add_module(field_processing_c_module
         main/field_processing.cpp
         main/field_processing_binds.cpp
 )
 
-target_link_libraries(field_processing
+target_link_libraries(field_processing_c_module
         PRIVATE
         geos
+        geos_c
         gdal_i
 )

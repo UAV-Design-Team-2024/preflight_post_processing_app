@@ -1,27 +1,21 @@
+#include <geos_c.h>
 #include <iostream>
-#include <memory>
-#include <geos/geom/GeometryFactory.h>
-#include <geos/io/WKTReader.h>
 
 int main() {
-    using namespace geos::geom;
-    using namespace geos::io;
+    GEOSContextHandle_t ctx = GEOS_init_r();
 
-    try {
-        auto factory = GeometryFactory::create();
-        WKTReader reader(factory.get());
+    const char* wkt = "LINESTRING (0 0, 1 1)";
+    GEOSWKTReader* reader = GEOSWKTReader_create_r(ctx);
 
-        const char* raw = "POINT(1 2)";
-        std::string input(raw);
-
-        std::cout << "[WKT Input] -> " << input << "\n";
-
-        auto geom = std::unique_ptr<Geometry>(reader.read(input));
-        std::cout << "Parsed geometry type: " << geom->getGeometryType() << "\n";
-
-    } catch (const std::exception& e) {
-        std::cerr << "GEOS failed: " << e.what() << std::endl;
+    GEOSGeometry* geom = GEOSWKTReader_read_r(ctx, reader, wkt);
+    if (!geom) {
+        std::cerr << "GEOS C API failed to parse WKT!\n";
+    } else {
+        std::cout << "WKT parsed successfully via GEOS C API\n";
+        GEOSGeom_destroy_r(ctx, geom);
     }
 
+    GEOSWKTReader_destroy_r(ctx, reader);
+    GEOS_finish_r(ctx);
     return 0;
 }
