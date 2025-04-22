@@ -1,19 +1,14 @@
 import multiprocessing
 import time
-import random
 from concurrent.futures import ProcessPoolExecutor
 
 # [START import]
 import numpy as np
-import math
-import sys
 # sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
 # from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
-from src.tools.field_processing import PointFactory, get_distance_matrix
+from src.tools.field_preprocessing.field_processing import PointFactory, get_distance_matrix
 
-import networkx as nx
-import random
-import matplotlib.pyplot as mpl
+
 def create_distance_matrices(args):
     i, points, altitude, num_processes, boundary_polygon = args
     print(f"Getting distance matrix for section {i+1}")
