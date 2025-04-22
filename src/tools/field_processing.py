@@ -19,7 +19,7 @@ from sklearn.cluster import DBSCAN
 from scipy.spatial import distance_matrix
 
 import sys
-sys.path.append(r'C:\Users\corde\Documents\Projects\preflight_post_processing_app\src\tests\c_conversion\cmake-build-debug')
+sys.path.append(r'C:\Users\corde\Documents\Projects\preflight_post_processing_app\src\tests\c_conversion\cmake-build-release')
 import os
 os.add_dll_directory(r"C:\OSGeo4W\bin")
 import field_processing_c_module

@@ -10,20 +10,13 @@
 #include <Dense>
 
 #include <geos_c.h>
-#include <geos/geom/Point.h>
-#include <geos/geom/LineString.h>
-#include <geos/geom/GeometryFactory.h>
-#include <geos/geom/Coordinate.h>
-#include <geos/geom/CoordinateSequence.h>
-#include <geos/geom/Geometry.h>
-#include <geos/geom/Polygon.h>
+
 
 #include <gdal.h>
 #include <gdal_priv.h>
 #include <ogrsf_frmts.h>
 
 using namespace std;
-using namespace geos::geom;
 
 
 

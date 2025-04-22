@@ -25,9 +25,14 @@ from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 import sys
 sys.path.append(r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app")
+sys.path.append(r'C:\Users\corde\Documents\Projects\preflight_post_processing_app\src\tests\c_conversion\cmake-build-release')
 # from src.tools.point_cloud_generator import make_points, get_distance_matrix, make_final_plot, get_coord_matrix
 from src.tools.field_processing import PointFactory, PlottingFactory, get_distance_matrix_c
 from src.tools.output import output_file
+
+import field_processing_c_module
+from field_processing_c_module import run_solver
+
 def create_distance_matrices(args):
     i, points, altitude, num_processes, boundary_polygon = args
     print(f"Getting distance matrix for section {i+1}")
@@ -93,91 +98,99 @@ def return_solution(data, manager, routing, solution):
     # [END solution_printer]
     return path_seq
 
-def run_solver(distance_matrix, points, boundary_polygon, length_col ,use_initial_solution, init_route = None):
+def run_ortools(distance_matrix, points, boundary_polygon, length_col ,use_initial_solution, init_route = None):
     if use_initial_solution:
         initial_route = init_route
         data = create_data_model(distance_matrix, initial_route)
     else:
         data = create_data_model(distance_matrix)
 
-    # [START index_manager]
-    print("Creating a manager...")
-    manager = pywrapcp.RoutingIndexManager(
-        len(data["distance_matrix"]), data["num_vehicles"], data["starts"], data["ends"]
-    )
-    # [END index_manager]
+    path_seq = run_solver(data['distance_matrix'], data['num_vehicles'],
+                          data['starts'], data['ends'])
 
-    # Create Routing Model.
-    # [START routing_model]
-    print("Starting routing model...")
-    routing = pywrapcp.RoutingModel(manager)
-
-    # [END routing_model]
-
-    # Create and register a transit callback.
-    # [START transit_callback]
-    def distance_callback(from_index, to_index):
-        """Returns the distance between the two nodes."""
-        # Convert from routing variable Index to distance matrix NodeIndex.
-        from_node = manager.IndexToNode(from_index)
-        to_node = manager.IndexToNode(to_index)
-        distance_matrix = data["distance_matrix"]
-        cost = distance_matrix[from_node][to_node]
-        return int(cost)
-    transit_callback_index = routing.RegisterTransitCallback(distance_callback)
-    routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
-
-    # [END arc_cost]
-    # Add Distance constraint.
-    # [START distance_constraint]
-    # dimension_name = "Distance"
-    # routing.AddDimension(
-    #     transit_callback_index,
-    #     0,  # no slack
-    #     2000,  # vehicle maximum travel distance
-    #     True,  # start cumul to zero
-    #     dimension_name,
-    # )
-    # distance_dimension = routing.GetDimensionOrDie(dimension_name)
-    # distance_dimension.SetGlobalSpanCostCoefficient(100)
-    # [END distance_constraint]
-
-    # Setting first solution heuristic.
-    # [START parameters]
-    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-    # search_parameters.first_solution_strategy = (
-    #     routing_enums_pb2.FirstSolutionStrategy.AUTOMATIC
-    # )
-    # search_parameters.local_search_metaheuristic = (
-    #     routing_enums_pb2.LocalSearchMetaheuristic.AUTOMATIC)
-
-    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-    search_parameters.first_solution_strategy = (
-        routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
-    )  # Prefer shortest paths
-    search_parameters.local_search_metaheuristic = (
-        routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
-    )  # Optimize paths iteratively
-    # search_parameters.time_limit.seconds = 30
-    search_parameters.time_limit.seconds = 60
-    search_parameters.log_search = True
-    # [END parameters]
-    routing.CloseModelWithParameters(search_parameters)
-    if use_initial_solution:
-        initial_solution = routing.ReadAssignmentFromRoutes(data["initial_routes"], True)
-        solution = routing.SolveFromAssignmentWithParameters(initial_solution, search_parameters)
-    else:
-        solution = routing.SolveWithParameters(search_parameters)
-    # Solve the problem.
-    # [START solve]
-    print("Beginning solve...")
-    if solution:
-        print(f"Solution found! Printing...")
-        path_seq = return_solution(data, manager, routing, solution)
+    if path_seq:
         return path_seq
     else:
-        print("No solution found...")
-    # [END return_solution]
+        print("No solution found OR solution is broken")
+
+    # # [START index_manager]
+    # print("Creating a manager...")
+    # manager = pywrapcp.RoutingIndexManager(
+    #     len(data["distance_matrix"]), data["num_vehicles"], data["starts"], data["ends"]
+    # )
+    # # [END index_manager]
+    #
+    # # Create Routing Model.
+    # # [START routing_model]
+    # print("Starting routing model...")
+    # routing = pywrapcp.RoutingModel(manager)
+    #
+    # # [END routing_model]
+    #
+    # # Create and register a transit callback.
+    # # [START transit_callback]
+    # def distance_callback(from_index, to_index):
+    #     """Returns the distance between the two nodes."""
+    #     # Convert from routing variable Index to distance matrix NodeIndex.
+    #     from_node = manager.IndexToNode(from_index)
+    #     to_node = manager.IndexToNode(to_index)
+    #     distance_matrix = data["distance_matrix"]
+    #     cost = distance_matrix[from_node][to_node]
+    #     return int(cost)
+    # transit_callback_index = routing.RegisterTransitCallback(distance_callback)
+    # routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
+    #
+    # # [END arc_cost]
+    # # Add Distance constraint.
+    # # [START distance_constraint]
+    # # dimension_name = "Distance"
+    # # routing.AddDimension(
+    # #     transit_callback_index,
+    # #     0,  # no slack
+    # #     2000,  # vehicle maximum travel distance
+    # #     True,  # start cumul to zero
+    # #     dimension_name,
+    # # )
+    # # distance_dimension = routing.GetDimensionOrDie(dimension_name)
+    # # distance_dimension.SetGlobalSpanCostCoefficient(100)
+    # # [END distance_constraint]
+    #
+    # # Setting first solution heuristic.
+    # # [START parameters]
+    # search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+    # # search_parameters.first_solution_strategy = (
+    # #     routing_enums_pb2.FirstSolutionStrategy.AUTOMATIC
+    # # )
+    # # search_parameters.local_search_metaheuristic = (
+    # #     routing_enums_pb2.LocalSearchMetaheuristic.AUTOMATIC)
+    #
+    # search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+    # search_parameters.first_solution_strategy = (
+    #     routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    # )  # Prefer shortest paths
+    # search_parameters.local_search_metaheuristic = (
+    #     routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+    # )  # Optimize paths iteratively
+    # # search_parameters.time_limit.seconds = 30
+    # search_parameters.time_limit.seconds = 60
+    # search_parameters.log_search = True
+    # # [END parameters]
+    # routing.CloseModelWithParameters(search_parameters)
+    # if use_initial_solution:
+    #     initial_solution = routing.ReadAssignmentFromRoutes(data["initial_routes"], True)
+    #     solution = routing.SolveFromAssignmentWithParameters(initial_solution, search_parameters)
+    # else:
+    #     solution = routing.SolveWithParameters(search_parameters)
+    # # Solve the problem.
+    # # [START solve]
+    # print("Beginning solve...")
+    # if solution:
+    #     print(f"Solution found! Printing...")
+    #     path_seq = return_solution(data, manager, routing, solution)
+    #     return path_seq
+    # else:
+    #     print("No solution found...")
+    # # [END return_solution]
 
 def main():
     """Entry point of the program."""
@@ -187,7 +200,7 @@ def main():
     kml_filepath = r'C:\Users\corde\OneDrive\Documents\QGroundControl\Missions\testfield_1.kml'
     # kml_filepath = r"C:/Users/rohan/OneDrive - University of Cincinnati/UAV Design/preflight_post_processing_app/src/tests/testfield_1.kml"
     height = 4.5  # meters
-    spacing = 4.5  # meters
+    spacing = 4.5 # meters
     num_processes = 4
     num_sections = 5
 
@@ -202,12 +215,12 @@ def main():
     reinitialize = False
     use_initial_solution = False
     plot_sections = True
-    plot_initial_solutions = True
+    plot_initial_solutions = False
     plot_solutions = False
 
     point_generator = PointFactory(kml_filepath=kml_filepath, spacing=spacing, height=height, num_sections=num_sections)
     point_generator.make_points()
-    point_generator.plot_points(show_usable=False, show_omitted=True)
+    # point_generator.plot_points(show_usable=False, show_omitted=True)
 
 
     # boundary_polygons, point_lists, altitude, length_cols = make_points(kml_filepath, height, spacing, num_sections, plot_sections)
@@ -250,7 +263,7 @@ def main():
     # First Pass
     with multiprocessing.Pool(processes=num_processes) as pool:
         tik = time.perf_counter()
-        sol = pool.starmap(run_solver, [
+        sol = pool.starmap(run_ortools, [
             (distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], use_initial_solution) for i in
             range(total_sections)])
         tok = time.perf_counter()

@@ -12,12 +12,9 @@
 #include <vector>
 #include <tuple>
 #include <Dense>
-#include <geos/geom/Point.h>
-#include <geos/geom/Geometry.h>
-#include <geos/geom/Polygon.h>
+
 
 using namespace std;
-using namespace geos::geom;
 
 
 tuple<double, double, double> latlon_to_ecef(const std::vector<double>& lat_deg,
