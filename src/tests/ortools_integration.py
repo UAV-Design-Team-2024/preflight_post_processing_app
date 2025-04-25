@@ -141,7 +141,7 @@ def main():
     with multiprocessing.Pool(processes=num_processes) as pool:
         tik = time.perf_counter()
         sol = pool.starmap(run_ortools, [
-            (distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], use_initial_solution) for i in
+            (distance_matrices[i], use_initial_solution) for i in
             range(total_sections)])
         tok = time.perf_counter()
         init_solutions.append(sol)
@@ -154,7 +154,7 @@ def main():
         with multiprocessing.Pool(processes=num_processes) as pool:
             tik = time.perf_counter()
             sol = pool.starmap(run_solver, [
-                (distance_matrices[i], point_lists[i], boundary_polygons[i], length_cols[i], True, init_solutions[0][i])
+                (distance_matrices[i], True, init_solutions[0][i])
                 for i in
                 range(total_sections)])
             tok = time.perf_counter()

@@ -16,6 +16,14 @@ logger = logging.getLogger()
 logger.setLevel(0)
 
 class DronePresetWindow(QWidget):
+
+    '''
+
+    UI contained for the Drone Presets, which can be utilized with prediction models and should be used
+    for keeping track of what drones are being used in a test run. Not a lot of features here, but can
+    be modified to your liking.
+
+    '''
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Create/Edit Drone Presets")

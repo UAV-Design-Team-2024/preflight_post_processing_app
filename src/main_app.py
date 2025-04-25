@@ -20,18 +20,14 @@ logger = logging.getLogger()
 logger.setLevel(0)
 
 
-
-'''
-Do all of your connecting logic in this file
-You can have other functions/helpers in different places, but everything should lead back here
-for ease of access...
-'''
-
-# def get_app():
-#     """ Returns the current QApplication instance """
-#     return QApplication.instance()
-
 class uc_agriculture_app(QApplication):
+    '''
+
+    Do all of your connecting logic in this file.
+    You can have other functions/helpers in different places, but everything should lead back here
+    for ease of access...
+
+    '''
     def __init__(self, *args):
         QApplication.__init__(self, *args)
 
@@ -51,7 +47,11 @@ class uc_agriculture_app(QApplication):
 
         self.units = units(unit_system.METRIC.value)
     def run(self):
-        """ Start the primary Qt event loop for the interface """
+        """
+
+        Start the primary Qt event loop for the interface
+
+        """
         res = self.exec()
         return res
 

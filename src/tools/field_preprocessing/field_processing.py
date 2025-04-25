@@ -19,9 +19,10 @@ from sklearn.cluster import DBSCAN
 from scipy.spatial import distance_matrix
 
 import sys
-sys.path.append(r'C:\Users\corde\Documents\Projects\preflight_post_processing_app\src\tools\field_preprocessing\c_functions\cmake-build-release')
+sys.path.append(r'C:\Users\corde\Documents\Projects\preflight_post_processing_app\src\tools\field_preprocessing\c_functions\cmake-build-release') # Replace with absolute paths of your own
 import os
-os.add_dll_directory(r"C:\Users\corde\Documents\Projects\preflight_post_processing_app\src\tools\field_preprocessing\c_functions\external\OSGeo4W\bin")
+os.add_dll_directory(r"C:\Users\corde\Documents\Projects\preflight_post_processing_app\src\tools\field_preprocessing\c_functions\external\OSGeo4W\bin") # Ditto
+#TODO: automate this
 import field_processing_c_module
 from field_processing_c_module import get_distance_matrix
 
