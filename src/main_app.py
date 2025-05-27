@@ -15,22 +15,19 @@ import pandas as pd
 # from helpers.dash_app.main_dash_app import dash_data_app
 from tools.units import units, unit_system
 from ui.widgets.drone_presets.drone_preset_window import DronePresetWindow
+from ui.widgets.path_optimization.path_optimization_window import PathOptimizationWindow
 logger = logging.getLogger()
 logger.setLevel(0)
 
 
-
-'''
-Do all of your connecting logic in this file
-You can have other functions/helpers in different places, but everything should lead back here
-for ease of access...
-'''
-
-# def get_app():
-#     """ Returns the current QApplication instance """
-#     return QApplication.instance()
-
 class uc_agriculture_app(QApplication):
+    '''
+
+    Do all of your connecting logic in this file.
+    You can have other functions/helpers in different places, but everything should lead back here
+    for ease of access...
+
+    '''
     def __init__(self, *args):
         QApplication.__init__(self, *args)
 
@@ -50,7 +47,11 @@ class uc_agriculture_app(QApplication):
 
         self.units = units(unit_system.METRIC.value)
     def run(self):
-        """ Start the primary Qt event loop for the interface """
+        """
+
+        Start the primary Qt event loop for the interface
+
+        """
         res = self.exec()
         return res
 
@@ -85,6 +86,10 @@ class uc_agriculture_app(QApplication):
     def create_drone_preset_window(self):
         self.drone_preset_window = DronePresetWindow()
         self.drone_preset_window.show()
+
+    def create_path_optimization_window(self):
+        self.path_optimization_window = PathOptimizationWindow()
+        self.path_optimization_window.show()
 
     def create_dash_urls(self):
         self.dash_app = dash_data_app("/test_dash_app/")

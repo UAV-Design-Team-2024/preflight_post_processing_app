@@ -8,6 +8,12 @@ logger = logging.getLogger()
 logger.setLevel(0)
 
 def launch_app():
+
+    '''
+
+    Launches the app. Run from here during development and make this your .exe target when building for release.
+
+    '''
     app = get_app()
 
     ui = MainUI()
